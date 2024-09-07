@@ -5,3 +5,12 @@ version = 3
 [[package]]
 name = "chip8-crab"
 version = "0.1.0"
+dependencies = [
+ "ux",
+]
+
+[[package]]
+name = "ux"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b59fc5417e036e53226bbebd90196825d358624fd5577432c4e486c95b1b096"
