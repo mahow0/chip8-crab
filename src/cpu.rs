@@ -59,7 +59,7 @@ impl CPU {
             ram : ram,
             vram : [[false; 64]; 32],
             stack : vec![0; 16],
-            pc : 0x200.into(),
+            pc : (0x200u16).try_into().unwrap(),
             index : 0x0.into(),
             vs : [0; 16]
         }
