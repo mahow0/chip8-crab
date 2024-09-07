@@ -2,6 +2,7 @@ use crate::memory::Memory;
 use ux::*;
 pub struct CPU {
     ram : Memory, // 4kB of RAM
+    vram : [[bool ; 64]; 32],
     stack : Vec<u16>, // stack, comprising of 2-byte values
     pc : u12, // program counter
     index : u12, // index register "I", used to point to addresses in memory
@@ -56,6 +57,7 @@ impl CPU {
         
         CPU {
             ram : ram,
+            vram : [[false; 64]; 32],
             stack : vec![0; 16],
             pc : 0x200.into(),
             index : 0x0.into(),
@@ -104,6 +106,8 @@ impl CPU {
         }
     }
 
-    pub fn execute(opcode : Opcode) -> ();
+    pub fn execute(opcode : Opcode) -> () {
+        unimplemented!("execute() needs to be implemented")
+    }
 }
 
