@@ -73,7 +73,7 @@ impl CPU {
         (byte_1, byte_2)
     }
 
-    pub fn decode(self, instr: (u8, u8)) -> Opcode {
+    pub fn decode(&self, instr: (u8, u8)) -> Opcode {
         match instr {
             (0x00, 0xE0) => Opcode::ClearScreen,
             (byte_1 @ 0x10..=0x1F, byte_2) => {

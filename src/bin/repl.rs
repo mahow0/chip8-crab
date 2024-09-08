@@ -82,7 +82,7 @@ fn main() {
                 let opcode = parse_opcode(&rest).expect("execution failed:\n");
                 let (a, b) = (opcode >> 8, opcode & 0x00FF);
                 let (a, b) = (a as u8, b as u8);
-                let decoded_opcode = CPU::decode((a, b));
+                let decoded_opcode = cpu.decode((a, b));
                 cpu.execute(decoded_opcode);
             }
 
