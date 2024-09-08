@@ -192,4 +192,18 @@ impl CPU {
             vy += 1;
         }
     }
+
+    pub fn view(&self) -> () {
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let pixel = self.vram[x][y];
+                if pixel {
+                    print!("■");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!();
+        }
+    }
 }

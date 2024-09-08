@@ -18,6 +18,7 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
         "e" | "ex" | "exe" | "exec" | "execu" | "execut" | "execute" => {
             Ok((Command::Execute, rest))
         }
+        "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
         _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
 }
@@ -42,12 +43,19 @@ fn parse_instruction(instruction: &str) -> Result<u16> {
 
 #[derive(Debug, PartialEq)]
 enum Command {
+    /// Load a ROM into the CPU but do not yet execute it
     Load,
+    /// Load the instructions from a ROM and execute them
     Run,
     Step,
     Quit,
+    /// Print the state of the CPU (registers)
     Debug,
+    /// Execute a single instruction in hex format (0xNNNN or NNNN)
     Execute,
+    /// View the current vram
+    View,
+
 }
 
 fn main() {
@@ -88,6 +96,10 @@ fn main() {
                 }
             }
 
+            Command::View => {
+                cpu.view();
+            }
+
             _ => {}
         }
     }
@@ -98,6 +110,22 @@ pub mod repl_tests {
     use super::*;
     #[test]
     pub fn test_parse_command() {
+        let (command, rest) = parse_command("view test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("vie test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("vi test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("v test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
         let (command, rest) = parse_command("load test").unwrap();
         assert_eq!(command, Command::Load);
         assert_eq!(rest, " test");
