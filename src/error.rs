@@ -13,7 +13,7 @@ pub enum Chip8Error {
     #[error("Could not parse command: {0}")]
     CommandParseError(String),
     #[error("Could not parse opcode: {0}")]
-    OpcodeParseError(String),
+    InstructionParseError(String),
     #[error("Could not convert number: {0}")]
     NumericalConversionError(String),
 }

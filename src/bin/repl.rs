@@ -1,7 +1,6 @@
 use chip8_crab::cpu::*;
 use chip8_crab::error::*;
 use regex::Regex;
-use thiserror::Error;
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
     let cap = Regex::new(r"(\w+)(.*)").unwrap().captures(command).unwrap();
@@ -22,12 +21,12 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
     }
 }
 
-fn parse_opcode(opcode: &str) -> Result<u16> {
+fn parse_instruction(instruction: &str) -> Result<u16> {
     let re = Regex::new(r"(0x)?([0-9A-Fa-f]{4,6})").unwrap();
-    let cap = re.captures(opcode).expect("Capture failed");
+    let cap = re.captures(instruction).expect("Capture failed");
     let hex = cap.get(2);
     if hex.is_none() {
-        return Err(Chip8Error::OpcodeParseError(opcode.to_string()));
+        return Err(Chip8Error::InstructionParseError(instruction.to_string()));
     }
     let hex = hex.unwrap().as_str();
     let hex = u16::from_str_radix(hex, 16);
