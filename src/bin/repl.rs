@@ -75,8 +75,14 @@ fn main() {
                 cpu = loader::load_program(&filename).expect("program load failed:\n");
             }
 
-            Command::Run => loop {
-                cpu.step().expect("run failed:\n");
+            Command::Run => {
+                loop {
+                    if let Err(err) = cpu.step() {
+                        println!("Error: {}", err);
+                        cpu.view();
+                        break;
+                    }
+                }
             },
 
             Command::Execute => {
