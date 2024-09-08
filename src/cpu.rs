@@ -67,7 +67,7 @@ impl CPU {
     }
 
     pub fn load_program(&mut self, data: &[u8]) -> () {
-        self.ram.load_rom(data);
+        self.ram.load_program(data);
     }
 
     pub fn step(&mut self) -> Result<()> {

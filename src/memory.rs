@@ -31,7 +31,7 @@ impl Memory {
 
     pub fn load_program(&mut self, data: &[u8]) -> () {
         let index = PROGRAM_START;
-        assert!(index + data.len() <= (SIZE - PROGRAM_START), "PROGRAM too large");
+        assert!(index + data.len() <= (SIZE - PROGRAM_START), "program too large");
         self.mem[index..index + data.len()].copy_from_slice(data);
     }
 }
