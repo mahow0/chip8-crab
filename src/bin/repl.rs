@@ -67,7 +67,7 @@ fn main() {
 
             Command::Execute => {
                 println!("Executing: {}", rest);
-                let opcode = parse_opcode(&rest).expect("execution failed:\n");
+                let opcode = parse_instruction(&rest).expect("execution failed:\n");
                 let (a, b) = (opcode >> 8, opcode & 0x00FF);
                 let (a, b) = (a as u8, b as u8);
                 let decoded_opcode = cpu.decode((a, b));
