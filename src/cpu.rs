@@ -1,8 +1,16 @@
+use std::intrinsics::wrapping_add;
+
 use crate::memory::Memory;
 use ux::*;
+
+const HEIGHT : usize = 64;
+const WIDTH : usize = 32;
+
+const HEIGHT_U8 : u8 = 64;
+const WIDTH_U8 : u8 = 32;
 pub struct CPU {
     ram : Memory, // 4kB of RAM
-    vram : [[bool ; 64]; 32],
+    vram : [[bool ; WIDTH]; HEIGHT],
     stack : Vec<u16>, // stack, comprising of 2-byte values
     pc : u12, // program counter
     index : u12, // index register "I", used to point to addresses in memory
@@ -57,7 +65,7 @@ impl CPU {
         
         CPU {
             ram : ram,
-            vram : [[false; 64]; 32],
+            vram : [[false; WIDTH]; HEIGHT],
             stack : vec![0; 16],
             pc : (0x200u16).try_into().unwrap(),
             index : 0x0.into(),
@@ -75,7 +83,7 @@ impl CPU {
         (byte_1, byte_2)
     } 
 
-    pub fn decode(instr : (u8, u8)) -> Opcode {
+    pub fn decode(self, instr : (u8, u8)) -> Opcode {
         match instr {
             (0x00, 0xE0) => Opcode::ClearScreen,
             (byte_1 @ 0x10..=0x1F, byte_2) => {
@@ -106,8 +114,67 @@ impl CPU {
         }
     }
 
-    pub fn execute(opcode : Opcode) -> () {
-        unimplemented!("execute() needs to be implemented")
+    pub fn execute(&mut self, opcode : Opcode) -> () {
+        match opcode {
+            Opcode::ClearScreen =>self.op_00e0(),
+            Opcode::Jump(addr) =>self.op_1nnn(addr),
+            Opcode::SetReg(reg, value) => self.op_6xnn(reg, value),
+            Opcode::AddReg(reg , value) => self.op_7xnn(reg, value),
+            Opcode::SetI(addr) => self.op_annn(addr),
+            Opcode::Display(x, y, n) => self.op_dxyn(x, y, n)
+
+        }
     }
-}
+
+    fn op_00e0(&mut self) {
+        for i in 0..HEIGHT {
+            self.vram[i] = [false; WIDTH];
+        }
+    }
+    fn op_1nnn(&mut self, nnn : u12) {
+        self.pc = nnn;
+    }
+    
+    fn op_6xnn(&mut self, x : u4, nn : u8) {
+        let index : u8 = x.into(); 
+        self.vs[usize::from(index)] = nn;
+    }
+    
+    fn op_7xnn(&mut self, x : u4, nn : u8) {
+        let index : u8 = x.into();
+        self.vs[usize::from(index)] = self.vs[usize::from(index)] + nn
+    }
+
+    fn op_annn(&mut self, nnn : u12) {
+        self.index = nnn
+    }
+
+    fn op_dxyn(&mut self, x : u4, y : u4, n : u4) {
+        let x_index : u8 = x.into();
+        let x_index : usize = usize::from(x_index);
+
+        let y_index : u8 = y.into();
+        let y_index : usize = usize::from(y_index);
+
+        let mut vx: u8 = self.vs[x_index];
+        let mut vy: u8 = self.vs[y_index];
+
+        //starting position of draw should be wrapped
+        vx = vx % HEIGHT_U8;
+        vy = vy % WIDTH_U8;
+
+        self.vs[0xF] = 0;
+
+        let last_row : u8 = n.into();
+        for i in (0..last_row) {
+
+            let sprite_row : u8 = self.ram.read(self.index + i.into());
+            //
+
+        }
+
+        todo!("complete the rest of the draw loop")
+
+    }
+    }
 
