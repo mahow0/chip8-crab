@@ -1,3 +1,4 @@
+use crate::error::*;
 use crate::memory::Memory;
 use ux::*;
 
@@ -6,6 +7,7 @@ const WIDTH: usize = 64;
 
 const HEIGHT_U8: u8 = 32;
 const WIDTH_U8: u8 = 64;
+
 pub struct CPU {
     ram: Memory,                   // 4kB of RAM
     vram: [[bool; HEIGHT]; WIDTH], //vram containing pixel values, stored in column-major order
@@ -64,6 +66,17 @@ impl CPU {
         }
     }
 
+    pub fn load_program(&mut self, data: &[u8]) -> () {
+        self.ram.load_program(data);
+    }
+
+    pub fn step(&mut self) -> Result<()> {
+        let instr = self.fetch();
+        let opcode = self.try_decode(instr)?;
+        self.execute(opcode);
+        Ok(())
+    }
+
     pub fn fetch(&mut self) -> (u8, u8) {
         let byte_1: u8 = self.ram.read(self.pc);
         let byte_2: u8 = self.ram.read(self.pc + 1.into());
@@ -73,8 +86,13 @@ impl CPU {
         (byte_1, byte_2)
     }
 
-    pub fn decode(self, instr: (u8, u8)) -> Opcode {
-        match instr {
+    pub fn decode(&self, instr: (u8, u8)) -> Opcode {
+        self.try_decode(instr)
+            .expect("Could not parse {instr:?} to opcode")
+    }
+
+    pub fn try_decode(&self, instr: (u8, u8)) -> Result<Opcode> {
+        let opcode = match instr {
             (0x00, 0xE0) => Opcode::ClearScreen,
             (byte_1 @ 0x10..=0x1F, byte_2) => {
                 let nibs_1: NibblePair = byte_1.into();
@@ -100,8 +118,14 @@ impl CPU {
                 let NibblePair(nib_2, nib_3) = byte_2.into();
                 Opcode::Display(nib_1, nib_2, nib_3)
             }
-            _ => todo!("more instructions"),
-        }
+            _ => {
+                return Err(Chip8Error::DecodeError {
+                    instr,
+                    reason: "No decoding implementation found for this hex range".to_string(),
+                })
+            }
+        };
+        Ok(opcode)
     }
 
     pub fn execute(&mut self, opcode: Opcode) -> () {
@@ -180,6 +204,20 @@ impl CPU {
             }
 
             vy += 1;
+        }
+    }
+
+    pub fn view(&self) -> () {
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let pixel = self.vram[x][y];
+                if pixel {
+                    print!("■");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!();
         }
     }
 }

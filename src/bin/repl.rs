@@ -1,18 +1,7 @@
 use chip8_crab::cpu::*;
+use chip8_crab::error::*;
+use chip8_crab::loader;
 use regex::Regex;
-use thiserror::Error;
-
-type Result<T> = std::result::Result<T, ReplError>;
-
-#[derive(Error, Debug)]
-enum ReplError {
-    #[error("Could not parse command: {0}")]
-    CommandParseError(String),
-    #[error("Could not parse opcode: {0}")]
-    OpcodeParseError(String),
-    #[error("Could not convert number: {0}")]
-    NumericalConversionError(String),
-}
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
     let cap = Regex::new(r"(\w+)(.*)").unwrap().captures(command).unwrap();
@@ -29,21 +18,23 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
         "e" | "ex" | "exe" | "exec" | "execu" | "execut" | "execute" => {
             Ok((Command::Execute, rest))
         }
-        _ => Err(ReplError::CommandParseError(command.to_string())),
+
+        "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
+        _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
 }
 
-fn parse_opcode(opcode: &str) -> Result<u16> {
+fn parse_instruction(instruction: &str) -> Result<u16> {
     let re = Regex::new(r"(0x)?([0-9A-Fa-f]{4,6})").unwrap();
-    let cap = re.captures(opcode).expect("Capture failed");
+    let cap = re.captures(instruction).expect("Capture failed");
     let hex = cap.get(2);
     if hex.is_none() {
-        return Err(ReplError::OpcodeParseError(opcode.to_string()));
+        return Err(Chip8Error::InstructionParseError(instruction.to_string()));
     }
     let hex = hex.unwrap().as_str();
     let hex = u16::from_str_radix(hex, 16);
     if hex.is_err() {
-        return Err(ReplError::NumericalConversionError(
+        return Err(Chip8Error::NumericalConversionError(
             hex.unwrap_err().to_string(),
         ));
     }
@@ -53,12 +44,18 @@ fn parse_opcode(opcode: &str) -> Result<u16> {
 
 #[derive(Debug, PartialEq)]
 enum Command {
+    /// Load a ROM into the CPU but do not yet execute it
     Load,
+    /// Load the instructions stored in CPU memory
     Run,
     Step,
     Quit,
+    /// Print the state of the CPU (registers)
     Debug,
+    /// Execute a single instruction in hex format (0xNNNN or NNNN)
     Execute,
+    /// View the current vram
+    View,
 }
 
 fn main() {
@@ -74,15 +71,26 @@ fn main() {
 
         match command {
             Command::Load => {
-                todo!("load instruction not yet implemented");
+                let filename = rest.trim();
+                cpu = loader::load_program(&filename).expect("program load failed:\n");
             }
+
+            Command::Run => {
+                loop {
+                    if let Err(err) = cpu.step() {
+                        println!("Error: {}", err);
+                        cpu.view();
+                        break;
+                    }
+                }
+            },
 
             Command::Execute => {
                 println!("Executing: {}", rest);
-                let opcode = parse_opcode(&rest).expect("execution failed:\n");
+                let opcode = parse_instruction(&rest).expect("execution failed:\n");
                 let (a, b) = (opcode >> 8, opcode & 0x00FF);
                 let (a, b) = (a as u8, b as u8);
-                let decoded_opcode = CPU::decode((a, b));
+                let decoded_opcode = cpu.decode((a, b));
                 cpu.execute(decoded_opcode);
             }
 
@@ -92,6 +100,15 @@ fn main() {
                     println!("V{:X}: {}", i, cpu.vs[i]);
                 }
             }
+
+            Command::View => {
+                cpu.view();
+            }
+
+            Command::Step => {
+                cpu.step().expect("step failed:\n");
+            }
+
             _ => {}
         }
     }
@@ -101,7 +118,26 @@ fn main() {
 pub mod repl_tests {
     use super::*;
     #[test]
-    pub fn test_parse_command() {
+    pub fn test_parse_view_command() {
+        let (command, rest) = parse_command("view test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("vie test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("vi test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("v test").unwrap();
+        assert_eq!(command, Command::View);
+        assert_eq!(rest, " test");
+    }
+
+    #[test]
+    pub fn test_parse_load_command() {
         let (command, rest) = parse_command("load test").unwrap();
         assert_eq!(command, Command::Load);
         assert_eq!(rest, " test");
@@ -117,7 +153,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("loa test").unwrap();
         assert_eq!(command, Command::Load);
         assert_eq!(rest, " test");
+    }
 
+    #[test]
+    pub fn test_parse_run_command() {
         let (command, rest) = parse_command("run test").unwrap();
         assert_eq!(command, Command::Run);
         assert_eq!(rest, " test");
@@ -129,7 +168,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("ru test").unwrap();
         assert_eq!(command, Command::Run);
         assert_eq!(rest, " test");
+    }
 
+    #[test]
+    pub fn test_parse_step_command() {
         let (command, rest) = parse_command("step test").unwrap();
         assert_eq!(command, Command::Step);
         assert_eq!(rest, " test");
@@ -145,7 +187,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("s test").unwrap();
         assert_eq!(command, Command::Step);
         assert_eq!(rest, " test");
+    }
 
+    #[test]
+    pub fn test_parse_quit_command() {
         let (command, rest) = parse_command("quit test").unwrap();
         assert_eq!(command, Command::Quit);
         assert_eq!(rest, " test");
@@ -161,7 +206,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("q test").unwrap();
         assert_eq!(command, Command::Quit);
         assert_eq!(rest, " test");
+    }
 
+    #[test]
+    pub fn test_parse_debug_command() {
         let (command, rest) = parse_command("debug  test").unwrap();
         assert_eq!(command, Command::Debug);
         assert_eq!(rest, "  test");
@@ -181,7 +229,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("d  test").unwrap();
         assert_eq!(command, Command::Debug);
         assert_eq!(rest, "  test");
+    }
 
+    #[test]
+    pub fn test_parse_execute_command() {
         let (command, rest) = parse_command("execute test").unwrap();
         assert_eq!(command, Command::Execute);
         assert_eq!(rest, " test");
