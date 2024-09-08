@@ -6,10 +6,7 @@ pub enum Chip8Error {
     #[error("Could not load ROM: {reason:?}")]
     ROMLoaderError { reason: String },
     #[error("Could not decode {instr:?} because {reason:?}")]
-    DecodeError { 
-        instr: (u8, u8),
-        reason: String 
-    },
+    DecodeError { instr: (u8, u8), reason: String },
     #[error("Could not parse command: {0}")]
     CommandParseError(String),
     #[error("Could not parse opcode: {0}")]

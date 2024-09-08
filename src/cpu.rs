@@ -1,5 +1,5 @@
-use crate::memory::Memory;
 use crate::error::*;
+use crate::memory::Memory;
 use ux::*;
 
 const HEIGHT: usize = 32;
@@ -76,6 +76,7 @@ impl CPU {
         self.execute(opcode);
         Ok(())
     }
+
     pub fn fetch(&mut self) -> (u8, u8) {
         let byte_1: u8 = self.ram.read(self.pc);
         let byte_2: u8 = self.ram.read(self.pc + 1.into());
@@ -85,9 +86,9 @@ impl CPU {
         (byte_1, byte_2)
     }
 
-
     pub fn decode(&self, instr: (u8, u8)) -> Opcode {
-        self.try_decode(instr).expect("Could not parse {instr:?} to opcode")
+        self.try_decode(instr)
+            .expect("Could not parse {instr:?} to opcode")
     }
 
     pub fn try_decode(&self, instr: (u8, u8)) -> Result<Opcode> {
@@ -117,10 +118,12 @@ impl CPU {
                 let NibblePair(nib_2, nib_3) = byte_2.into();
                 Opcode::Display(nib_1, nib_2, nib_3)
             }
-            _ => return Err(Chip8Error::DecodeError {
-                instr,
-                reason: "No decoding implementation found for this hex range".to_string(),
-            }),
+            _ => {
+                return Err(Chip8Error::DecodeError {
+                    instr,
+                    reason: "No decoding implementation found for this hex range".to_string(),
+                })
+            }
         };
         Ok(opcode)
     }

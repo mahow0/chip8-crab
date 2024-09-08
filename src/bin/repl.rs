@@ -15,8 +15,10 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
         "s" | "step" | "ste" | "st" => Ok((Command::Step, rest)),
         "d" | "de" | "deb" | "debu" | "debug" => Ok((Command::Debug, rest)),
         "q" | "qu" | "qui" | "quit" | "exit" => Ok((Command::Quit, rest)),
-        "e" | "ex" | "exe" | "exec" | "execu" | "execut" | "execute" => Ok((Command::Execute, rest)),
-        
+        "e" | "ex" | "exe" | "exec" | "execu" | "execut" | "execute" => {
+            Ok((Command::Execute, rest))
+        }
+
         "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
         _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
@@ -54,7 +56,6 @@ enum Command {
     Execute,
     /// View the current vram
     View,
-
 }
 
 fn main() {
@@ -74,11 +75,9 @@ fn main() {
                 cpu = loader::load_program(&filename).expect("program load failed:\n");
             }
 
-            Command::Run => {
-                loop {
-                    cpu.step().expect("run failed:\n");
-                }
-            }
+            Command::Run => loop {
+                cpu.step().expect("run failed:\n");
+            },
 
             Command::Execute => {
                 println!("Executing: {}", rest);
@@ -148,7 +147,6 @@ pub mod repl_tests {
         let (command, rest) = parse_command("loa test").unwrap();
         assert_eq!(command, Command::Load);
         assert_eq!(rest, " test");
-
     }
 
     #[test]
@@ -164,12 +162,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("ru test").unwrap();
         assert_eq!(command, Command::Run);
         assert_eq!(rest, " test");
-
     }
 
     #[test]
     pub fn test_parse_step_command() {
-
         let (command, rest) = parse_command("step test").unwrap();
         assert_eq!(command, Command::Step);
         assert_eq!(rest, " test");
@@ -185,12 +181,10 @@ pub mod repl_tests {
         let (command, rest) = parse_command("s test").unwrap();
         assert_eq!(command, Command::Step);
         assert_eq!(rest, " test");
-
     }
 
     #[test]
     pub fn test_parse_quit_command() {
-
         let (command, rest) = parse_command("quit test").unwrap();
         assert_eq!(command, Command::Quit);
         assert_eq!(rest, " test");
@@ -233,7 +227,6 @@ pub mod repl_tests {
 
     #[test]
     pub fn test_parse_execute_command() {
-
         let (command, rest) = parse_command("execute test").unwrap();
         assert_eq!(command, Command::Execute);
         assert_eq!(rest, " test");
@@ -262,6 +255,4 @@ pub mod repl_tests {
         assert_eq!(command, Command::Execute);
         assert_eq!(rest, " test");
     }
-
-
 }

@@ -1,6 +1,6 @@
-use std::fs;
+use crate::cpu::{Opcode, CPU};
 use crate::error::*;
-use crate::cpu::{CPU, Opcode};
+use std::fs;
 
 /// Accepts a binary file and returns a vector of bytes.
 fn load_bytes(filename: &str) -> Result<Vec<u8>> {
@@ -9,7 +9,7 @@ fn load_bytes(filename: &str) -> Result<Vec<u8>> {
     })
 }
 
-/// Accepts a binary file where every 2 bytes corresponds to a 
+/// Accepts a binary file where every 2 bytes corresponds to a
 /// chip8 instruction. Returns a vector of decoded opcodes.
 fn load_opcodes(filename: &str) -> Result<Vec<Opcode>> {
     let rom = load_bytes(filename)?;
@@ -25,7 +25,7 @@ fn load_opcodes(filename: &str) -> Result<Vec<Opcode>> {
         rom_tuples.push(val);
     }
 
-    let mut opcodes =  Vec::new();
+    let mut opcodes = Vec::new();
     let cpu = CPU::new();
     for instr in rom_tuples {
         let opcode = cpu.try_decode(instr)?;
@@ -35,7 +35,7 @@ fn load_opcodes(filename: &str) -> Result<Vec<Opcode>> {
     Ok(opcodes)
 }
 
-/// Accepts a binary file corresponding to a series of 
+/// Accepts a binary file corresponding to a series of
 /// raw u16 bytes to put into program memory. Returns a CPU with the ROM loaded.
 pub fn load_program(filename: &str) -> Result<CPU> {
     let bytes = load_bytes(filename)?;
@@ -46,7 +46,7 @@ pub fn load_program(filename: &str) -> Result<CPU> {
 
 /// Accepts a binary file where every 2 bytes corresponds to a
 /// chip8 instruction. Executes each instruction in the CPU.
-pub fn run(filename: &str, cpu : &mut CPU) -> Result<()> {
+pub fn run(filename: &str, cpu: &mut CPU) -> Result<()> {
     for opcode in load_opcodes(filename)? {
         cpu.execute(opcode);
     }
