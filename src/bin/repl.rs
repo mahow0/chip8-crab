@@ -1,5 +1,6 @@
 use chip8_crab::cpu::*;
 use chip8_crab::error::*;
+use chip8_crab::loader;
 use regex::Regex;
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
@@ -62,7 +63,13 @@ fn main() {
 
         match command {
             Command::Load => {
-                todo!("load instruction not yet implemented");
+                let filename = rest.trim();
+                cpu = loader::load_rom(&filename).expect("rom load failed:\n");
+            }
+
+            Command::Run => {
+                let filename = rest.trim();
+                loader::run(&filename, &mut cpu).expect("run failed:\n");
             }
 
             Command::Execute => {
