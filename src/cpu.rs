@@ -1,16 +1,14 @@
-use std::intrinsics::wrapping_add;
-
 use crate::memory::Memory;
 use ux::*;
 
-const HEIGHT : usize = 64;
-const WIDTH : usize = 32;
+const HEIGHT : usize = 32;
+const WIDTH : usize = 64;
 
-const HEIGHT_U8 : u8 = 64;
-const WIDTH_U8 : u8 = 32;
+const HEIGHT_U8 : u8 = 32;
+const WIDTH_U8 : u8 = 64;
 pub struct CPU {
     ram : Memory, // 4kB of RAM
-    vram : [[bool ; WIDTH]; HEIGHT],
+    vram : [[bool ; HEIGHT]; WIDTH], //vram containing pixel values, stored in column-major order
     stack : Vec<u16>, // stack, comprising of 2-byte values
     pc : u12, // program counter
     index : u12, // index register "I", used to point to addresses in memory
@@ -65,7 +63,7 @@ impl CPU {
         
         CPU {
             ram : ram,
-            vram : [[false; WIDTH]; HEIGHT],
+            vram : [[false; HEIGHT]; WIDTH],
             stack : vec![0; 16],
             pc : (0x200u16).try_into().unwrap(),
             index : 0x0.into(),
@@ -122,13 +120,12 @@ impl CPU {
             Opcode::AddReg(reg , value) => self.op_7xnn(reg, value),
             Opcode::SetI(addr) => self.op_annn(addr),
             Opcode::Display(x, y, n) => self.op_dxyn(x, y, n)
-
         }
     }
 
     fn op_00e0(&mut self) {
-        for i in 0..HEIGHT {
-            self.vram[i] = [false; WIDTH];
+        for i in 0..WIDTH {
+            self.vram[i] = [false; HEIGHT];
         }
     }
     fn op_1nnn(&mut self, nnn : u12) {
@@ -160,8 +157,8 @@ impl CPU {
         let mut vy: u8 = self.vs[y_index];
 
         //starting position of draw should be wrapped
-        vx = vx % HEIGHT_U8;
-        vy = vy % WIDTH_U8;
+        vx = vx % WIDTH_U8;
+        vy = vy % HEIGHT_U8;
 
         self.vs[0xF] = 0;
 
@@ -169,11 +166,36 @@ impl CPU {
         for i in (0..last_row) {
 
             let sprite_row : u8 = self.ram.read(self.index + i.into());
-            //
+            for col in (0..8) {
+
+                //Check whether we've hit the right edge of the screen
+                if (vx + col >= WIDTH_U8) {
+                    break;
+                }
+                
+                //Grab the ``col``th pixel in sprite row
+                let sprite_pixel = (sprite_row >> col) & (0x01);
+                
+                let screen_x = usize::from(vx + col);
+                let screen_y = usize::from(vy);
+                let screen_pixel: bool = self.vram[screen_x][screen_y]; 
+                if (sprite_pixel == 1) {
+                    if screen_pixel {
+                        self.vram[screen_x][screen_y] = false;
+                        self.vs[0xF] = 1;
+                    }
+
+                    else {
+                        self.vram[screen_x][screen_y] = true;
+                    }
+
+                }
+                
+            }
+
+            vy += 1;
 
         }
-
-        todo!("complete the rest of the draw loop")
 
     }
     }
