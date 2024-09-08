@@ -66,6 +66,16 @@ impl CPU {
         }
     }
 
+    pub fn load_program(&mut self, data: &[u8]) -> () {
+        self.ram.load_rom(data);
+    }
+
+    pub fn step(&mut self) -> Result<()> {
+        let instr = self.fetch();
+        let opcode = self.try_decode(instr)?;
+        self.execute(opcode);
+        Ok(())
+    }
     pub fn fetch(&mut self) -> (u8, u8) {
         let byte_1: u8 = self.ram.read(self.pc);
         let byte_2: u8 = self.ram.read(self.pc + 1.into());
@@ -74,6 +84,7 @@ impl CPU {
 
         (byte_1, byte_2)
     }
+
 
     pub fn decode(&self, instr: (u8, u8)) -> Opcode {
         self.try_decode(instr).expect("Could not parse {instr:?} to opcode")

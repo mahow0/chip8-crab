@@ -2,13 +2,17 @@ use std::fs;
 use crate::error::*;
 use crate::cpu::{CPU, Opcode};
 
+/// Accepts a binary file and returns a vector of bytes.
+fn load_bytes(filename: &str) -> Result<Vec<u8>> {
+    fs::read(filename).map_err(|err| Chip8Error::ROMLoaderError {
+        reason: err.to_string(),
+    })
+}
+
 /// Accepts a binary file where every 2 bytes corresponds to a 
 /// chip8 instruction. Returns a vector of decoded opcodes.
 fn load_opcodes(filename: &str) -> Result<Vec<Opcode>> {
-    let rom = fs::read(filename).map_err(|err| Chip8Error::ROMLoaderError {
-        reason: err.to_string(),
-    })?;
-
+    let rom = load_bytes(filename)?;
     if rom.len() % 2 != 0 {
         return Err(Chip8Error::ROMLoaderError {
             reason: "ROM could not be parsed into groups of (u8, u8)".to_string(),
@@ -31,12 +35,13 @@ fn load_opcodes(filename: &str) -> Result<Vec<Opcode>> {
     Ok(opcodes)
 }
 
-/// Accepts a binary file where every 2 bytes corresponds to a
-/// chip8 instruction. Returns a CPU with the ROM loaded.
-pub fn load_rom(filename: &str) -> Result<CPU> {
-    let _ = load_opcodes(filename)?;
-
-    unimplemented!("We'll need to return the CPU after loading the ROM, but ROM doesn't exist yet.");
+/// Accepts a binary file corresponding to a series of 
+/// raw u16 bytes to put into program memory. Returns a CPU with the ROM loaded.
+pub fn load_program(filename: &str) -> Result<CPU> {
+    let bytes = load_bytes(filename)?;
+    let mut cpu = CPU::new();
+    cpu.load_program(&bytes);
+    Ok(cpu)
 }
 
 /// Accepts a binary file where every 2 bytes corresponds to a
