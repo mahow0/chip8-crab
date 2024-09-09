@@ -50,9 +50,10 @@ fn parse_hex(input: &str) -> Result<u16> {
 enum Command {
     /// Load a ROM into the CPU but do not yet execute it
     Load,
-    /// Load the instructions stored in CPU memory
+    /// Steps the CPU until it halts, a breakpoint is hit, or an error occurs
     Run,
     Step,
+    /// Exits the program
     Quit,
     /// Print the state of the CPU (registers)
     Debug,
