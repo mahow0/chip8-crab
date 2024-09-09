@@ -169,9 +169,9 @@ fn main() {
                     breakpoints.retain(|&x| x != addr);
                 } else {
                     println!("Adding breakpoint when the pc is {:#X}", addr);
+                    breakpoints.push(addr);
                 }
 
-                breakpoints.push(addr);
             }
 
             _ => {}
