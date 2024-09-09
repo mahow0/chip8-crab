@@ -55,6 +55,8 @@ pub enum Opcode {
 }
 
 impl CPU {
+    /* Initializes the CPU by allocating a fresh block of 
+    memory and setting registers to their initial values*/
     pub fn new() -> Self {
         let ram: Memory = Memory::new();
 
@@ -68,35 +70,37 @@ impl CPU {
         }
     }
 
+    /* Returns an immutable reference to the ram for debugging purposes */
     pub fn ram(&self) -> &Memory {
         &self.ram
     }
-
+    /* Loads a program into memory */
     pub fn load_program(&mut self, data: &[u8]) -> () {
         self.ram.load_program(data);
     }
 
+    /* Simulates one CPU cycle, returning an error if decoding fails */
     pub fn step(&mut self) -> Result<()> {
         let instr = self.fetch();
         let opcode = self.try_decode(instr)?;
         self.execute(opcode);
         Ok(())
     }
-
+    /* Fetches the current instruction pointed to by the PC. Increments the PC by 2 */
     pub fn fetch(&mut self) -> (u8, u8) {
         let byte_1: u8 = self.ram.read(self.pc);
         let byte_2: u8 = self.ram.read(self.pc + 1.into());
 
         self.pc = self.pc + 2.into();
-
         (byte_1, byte_2)
     }
 
+    /* Decodes ``instr``, returning the Opcode it corresponds to */
     pub fn decode(&self, instr: (u8, u8)) -> Opcode {
         self.try_decode(instr)
             .expect("Could not parse {instr:?} to opcode")
     }
-
+        /* Decodes ``instr``, returning the Opcode it corresponds to */
     pub fn try_decode(&self, instr: (u8, u8)) -> Result<Opcode> {
         let opcode = match instr {
             (0x00, 0xE0) => Opcode::ClearScreen,
@@ -134,6 +138,7 @@ impl CPU {
         Ok(opcode)
     }
 
+    /* Executes the instruction indicated by ``opcode`` */
     pub fn execute(&mut self, opcode: Opcode) -> () {
         match opcode {
             Opcode::ClearScreen => self.op_00e0(),
@@ -189,7 +194,7 @@ impl CPU {
             let sprite_row: u8 = self.ram.read(self.index + i.into());
             for col in (0..8) {
                 //Check whether we've hit the right edge of the screen
-                if (vx + col >= WIDTH_U8) {
+                if vx + col >= WIDTH_U8 {
                     break;
                 }
 
@@ -199,7 +204,7 @@ impl CPU {
                 let screen_x = usize::from(vx + col);
                 let screen_y = usize::from(vy);
                 let screen_pixel: bool = self.vram[screen_x][screen_y];
-                if (sprite_pixel == 1) {
+                if sprite_pixel == 1 {
                     if screen_pixel {
                         self.vram[screen_x][screen_y] = false;
                         self.vs[0xF] = 1;
