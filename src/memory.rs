@@ -18,6 +18,17 @@ impl Memory {
         Memory { mem: mem }
     }
 
+    pub fn read_word(&self, addr: u12) -> u16 {
+        let wide: u16 = u12::into(addr);
+        let index: usize = u16::into(wide);
+        let mut line: u16 = 0;
+        for i in 0..2 {
+            line = line << 8;
+            line = line + u16::from(self.mem[index + i]);
+        }
+        line
+    }
+
     pub fn read(&self, addr: u12) -> u8 {
         let wide: u16 = u12::into(addr);
         let index: usize = u16::into(wide);

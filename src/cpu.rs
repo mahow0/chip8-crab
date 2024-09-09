@@ -44,6 +44,7 @@ pub fn nibtrio_2_u12(trio: (u4, u4, u4)) -> u12 {
     twelve
 }
 
+#[derive(Debug, Clone)]
 pub enum Opcode {
     ClearScreen,
     Jump(u12),
@@ -65,6 +66,10 @@ impl CPU {
             index: 0x0.into(),
             vs: [0; 16],
         }
+    }
+
+    pub fn ram(&self) -> &Memory {
+        &self.ram
     }
 
     pub fn load_program(&mut self, data: &[u8]) -> () {

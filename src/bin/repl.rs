@@ -2,6 +2,7 @@ use chip8_crab::cpu::*;
 use chip8_crab::error::*;
 use chip8_crab::loader;
 use regex::Regex;
+use ux::*;
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
     let cap = Regex::new(r"(\w+)(.*)").unwrap().captures(command).unwrap();
@@ -21,6 +22,7 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
 
         "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
         "b" | "br" | "bre" | "brea" | "break" | "breakpoint" => Ok((Command::Breakpoint, rest)),
+        "m" | "me" | "mem" | "memory" => Ok((Command::Memory, rest)),
         _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
 }
@@ -60,6 +62,8 @@ enum Command {
     /// Toggles a breakpoint on the pc of the CPU
     /// If a breakpoint is hit, the CPU will pause execution and return to the REPL
     Breakpoint,
+    /// View the memory of the CPU
+    Memory,
 }
 
 fn main() {
@@ -81,6 +85,73 @@ fn main() {
         let (command, rest) = result.unwrap();
 
         match command {
+            Command::Memory => {
+                // Prints around the memory, a little above and below
+                let pc = cpu.program_counter();
+                let pc = pc;
+                let addr;
+                if rest.trim().len() > 0 {
+                    if parse_hex(&rest).is_err() {
+                        println!("Could not parse memory address: {}", rest);
+                        continue;
+                    }
+                    addr = match u12::try_from(parse_hex(&rest).unwrap()) {
+                        Ok(addr) => addr,
+                        Err(_) => {
+                            println!("Could not convert to u12: {}", rest);
+                            continue;
+                        }
+                    }
+                } else {
+                    addr = u12::try_from(pc).expect("pc should never be larger than u12");
+                }
+                // Round down to nearest 16 bytes
+                let addr = addr & u12::try_from(0xFF0 as u16).unwrap();
+                // Print 4 groups of 2 bytes per row, or "____" if out of range 
+                // for three rows above and below the address
+                
+                // row above
+                if addr >= u12::from(16) {
+                    print!("0x{:04X}: ", u16::from(addr) - 16);
+                } else {
+                    print!("____ :");
+                }
+                for i in 0..4 {
+                    if addr < u12::from(16) {
+                        print!("____ ");
+                    } else {
+                        let ram = cpu.ram();
+                        let line = ram.read_word(addr - u12::from(16) + u12::from(i*2));
+                        print!("{:04X} ", line)
+                    }
+                }
+                println!();
+
+                // row around
+                print!("0x{:04X}: ", addr);
+                for i in 0..4 {
+                    let ram = cpu.ram();
+                    let line = ram.read_word(addr + u12::from(i*2));
+                    print!("{:04X} ", line)
+                }
+                println!();
+
+                // row below
+                print!("0x{:04X}: ", u16::from(addr) + 16);
+                for i in 0..4 {
+                    if addr >= u12::try_from(0xFF0 as u16).unwrap() {
+                        print!("____ ");
+                    } else {
+                        let ram = cpu.ram();
+                        let line = ram.read_word(addr + u12::from(16) + u12::from(i*2));
+                        print!("{:04X} ", line)
+                    }
+                }
+                println!();
+
+                
+            }
+
             Command::Load => {
                 let filename = rest.trim();
                 let new_cpu = loader::load_program(&filename);
@@ -124,9 +195,16 @@ fn main() {
             Command::Debug => {
                 println!("Debugging");
                 for i in 0..16 {
-                    println!("V{:X}: {}", i, cpu.vs[i]);
+                    println!("V{:X}: 0x{:04X}", i, cpu.vs[i]);
                 }
                 println!("PC: {:#X}", cpu.program_counter());
+                let instr = cpu.fetch();
+                let instr_hex = u32::from(instr.0) << 8 | u32::from(instr.1);
+                match cpu.try_decode(instr) {
+                    Ok(opcode) => println!("Instruction @ pc: 0x{:04X} | Decoded: {:?}", instr_hex, opcode),
+                    Err(_) => println!("Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE", instr_hex),
+                }
+            
             }
 
             Command::View => {
@@ -147,8 +225,8 @@ fn main() {
                 for _ in 0..steps {
                     let result = cpu.step();
                     if result.is_err() {
-                        println!("Error: {}", result.unwrap_err());
                         cpu.view();
+                        println!("Error: {}", result.unwrap_err());
                         break
                     }
                 }
@@ -351,6 +429,25 @@ pub mod repl_tests {
 
         let (command, rest) = parse_command("b test").unwrap();
         assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+    }
+
+    #[test]
+    pub fn test_parse_memory_command() {
+        let (command, rest) = parse_command("memory test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("mem test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("me test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("m test").unwrap();
+        assert_eq!(command, Command::Memory);
         assert_eq!(rest, " test");
     }
 }
