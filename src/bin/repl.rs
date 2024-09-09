@@ -107,7 +107,7 @@ fn main() {
                 }
                 // Round down to nearest 16 bytes
                 let addr = addr & u12::try_from(0xFF0 as u16).unwrap();
-                // Print 4 groups of 2 bytes per row, or "____" if out of range 
+                // Print 8 groups of 2 bytes per row, or "____" if out of range 
                 // for three rows above and below the address
                 
                 // row above
@@ -116,7 +116,7 @@ fn main() {
                 } else {
                     print!("____ :");
                 }
-                for i in 0..4 {
+                for i in 0..8 {
                     if addr < u12::from(16) {
                         print!("____ ");
                     } else {
@@ -129,7 +129,7 @@ fn main() {
 
                 // row around
                 print!("0x{:04X}: ", addr);
-                for i in 0..4 {
+                for i in 0..8 {
                     let ram = cpu.ram();
                     let line = ram.read_word(addr + u12::from(i*2));
                     print!("{:04X} ", line)
@@ -138,7 +138,7 @@ fn main() {
 
                 // row below
                 print!("0x{:04X}: ", u16::from(addr) + 16);
-                for i in 0..4 {
+                for i in 0..8 {
                     if addr >= u12::try_from(0xFF0 as u16).unwrap() {
                         print!("____ ");
                     } else {
