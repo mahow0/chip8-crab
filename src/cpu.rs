@@ -44,6 +44,7 @@ pub fn nibtrio_2_u12(trio: (u4, u4, u4)) -> u12 {
     twelve
 }
 
+#[derive(Debug, Clone)]
 pub enum Opcode {
     ClearScreen,
     Jump(u12),

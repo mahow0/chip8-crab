@@ -21,6 +21,7 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
 
         "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
         "b" | "br" | "bre" | "brea" | "break" | "breakpoint" => Ok((Command::Breakpoint, rest)),
+        "m" | "me" | "mem" | "memory" => Ok((Command::Memory, rest)),
         _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
 }
@@ -60,6 +61,8 @@ enum Command {
     /// Toggles a breakpoint on the pc of the CPU
     /// If a breakpoint is hit, the CPU will pause execution and return to the REPL
     Breakpoint,
+    /// View the memory of the CPU
+    Memory,
 }
 
 fn main() {
@@ -127,6 +130,12 @@ fn main() {
                     println!("V{:X}: {}", i, cpu.vs[i]);
                 }
                 println!("PC: {:#X}", cpu.program_counter());
+                let instr = cpu.fetch();
+                match cpu.try_decode(instr) {
+                    Ok(opcode) => println!("Instruction @ pc: {:?} Decoded: {:?}", instr, opcode),
+                    Err(_) => println!("Instruction @ pc: {:?} Decoded: INVALID_OPCODE", instr),
+                }
+            
             }
 
             Command::View => {
@@ -351,6 +360,25 @@ pub mod repl_tests {
 
         let (command, rest) = parse_command("b test").unwrap();
         assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+    }
+
+    #[test]
+    pub fn test_parse_memory_command() {
+        let (command, rest) = parse_command("memory test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("mem test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("me test").unwrap();
+        assert_eq!(command, Command::Memory);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("m test").unwrap();
+        assert_eq!(command, Command::Memory);
         assert_eq!(rest, " test");
     }
 }
