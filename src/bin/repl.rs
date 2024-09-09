@@ -198,8 +198,9 @@ fn main() {
                     println!("V{:X}: 0x{:04X}", i, cpu.vs[i]);
                 }
                 println!("PC: {:#X}", cpu.program_counter());
-                let instr = cpu.fetch();
-                let instr_hex = u32::from(instr.0) << 8 | u32::from(instr.1);
+                let pc = u12::try_from(cpu.program_counter()).unwrap();
+                let instr_hex = cpu.ram().read_word(pc);
+                let instr = ((instr_hex >> 8) as u8, instr_hex as u8);
                 match cpu.try_decode(instr) {
                     Ok(opcode) => println!("Instruction @ pc: 0x{:04X} | Decoded: {:?}", instr_hex, opcode),
                     Err(_) => println!("Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE", instr_hex),
