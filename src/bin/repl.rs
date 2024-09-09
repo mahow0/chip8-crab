@@ -51,6 +51,7 @@ enum Command {
     Load,
     /// Load the instructions stored in CPU memory
     Run,
+    ///  Steps the CPU by one instruction or optionally a specified number of times
     Step,
     Quit,
     /// Print the state of the CPU (registers)
