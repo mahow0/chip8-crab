@@ -37,7 +37,7 @@ view - prints the vram
 Usage examples:
 
 ```
-load roms/pong.ch8 # loads a file located at roms/pong.ch8 to CPU
+load roms/pong.ch8 # loads a file located at roms/pong.ch8 to a new CPU
 l roms/pong.ch8    # same as above
 
 run              # runs the CPU until it crashes
