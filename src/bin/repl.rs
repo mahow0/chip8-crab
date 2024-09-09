@@ -228,8 +228,8 @@ fn main() {
                 for _ in 0..steps {
                     let result = cpu.step();
                     if result.is_err() {
-                        println!("Error: {}", result.unwrap_err());
                         cpu.view();
+                        println!("Error: {}", result.unwrap_err());
                         break
                     }
                 }
