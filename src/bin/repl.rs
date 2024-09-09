@@ -120,10 +120,9 @@ fn main() {
                     if addr < u12::from(16) {
                         print!("____ ");
                     } else {
-                        let mem = cpu.ram().read(addr - u12::from(16 + i*2));
-                        let hi = mem << 2;
-                        let lo = cpu.ram().read(addr - u12::from(16 + i*2 + 1));
-                        print!("{:04X} ", hi | lo)
+                        let ram = cpu.ram();
+                        let line = ram.read_word(addr - u12::from(16) + u12::from(i*2));
+                        print!("{:04X} ", line)
                     }
                 }
                 println!();
@@ -131,10 +130,9 @@ fn main() {
                 // row around
                 print!("0x{:04X}: ", addr);
                 for i in 0..4 {
-                    let mem = cpu.ram().read(addr + u12::from(i*2));
-                    let hi = mem << 2;
-                    let lo = cpu.ram().read(addr + u12::from(i*2 + 1));
-                    print!("{:04X} ", hi | lo)
+                    let ram = cpu.ram();
+                    let line = ram.read_word(addr + u12::from(i*2));
+                    print!("{:04X} ", line)
                 }
                 println!();
 
@@ -144,10 +142,9 @@ fn main() {
                     if addr >= u12::try_from(0xFF0 as u16).unwrap() {
                         print!("____ ");
                     } else {
-                        let mem = cpu.ram().read(addr + u12::from(16 + i*2));
-                        let hi = mem << 2;
-                        let lo = cpu.ram().read(addr + u12::from(16 + i*2 + 1));
-                        print!("{:04X} ", hi | lo)
+                        let ram = cpu.ram();
+                        let line = ram.read_word(addr + u12::from(16) + u12::from(i*2));
+                        print!("{:04X} ", line)
                     }
                 }
                 println!();
