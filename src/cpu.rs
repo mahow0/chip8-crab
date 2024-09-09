@@ -68,6 +68,10 @@ impl CPU {
         }
     }
 
+    pub fn ram(&self) -> &Memory {
+        &self.ram
+    }
+
     pub fn load_program(&mut self, data: &[u8]) -> () {
         self.ram.load_program(data);
     }
