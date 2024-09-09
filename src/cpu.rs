@@ -34,11 +34,11 @@ pub fn nibtrio_2_u12(trio: (u4, u4, u4)) -> u12 {
     let mut twelve: u12 = 0.into();
     let (nib_1, nib_2, nib_3) = trio;
 
-    let mut nib_1_u12 : u12 = nib_1.into();
+    let mut nib_1_u12: u12 = nib_1.into();
     nib_1_u12 = nib_1_u12 << 8;
     twelve = twelve + nib_1_u12;
 
-    let mut nib_2_u12 : u12 = nib_2.into();
+    let mut nib_2_u12: u12 = nib_2.into();
     nib_2_u12 = nib_2_u12 << 4;
     twelve = twelve + nib_2_u12;
 
@@ -58,7 +58,7 @@ pub enum Opcode {
 }
 
 impl CPU {
-    /* Initializes the CPU by allocating a fresh block of 
+    /* Initializes the CPU by allocating a fresh block of
     memory and setting registers to their initial values*/
     pub fn new() -> Self {
         let ram: Memory = Memory::new();
@@ -103,7 +103,7 @@ impl CPU {
         self.try_decode(instr)
             .expect("Could not parse {instr:?} to opcode")
     }
-        /* Decodes ``instr``, returning the Opcode it corresponds to */
+    /* Decodes ``instr``, returning the Opcode it corresponds to */
     pub fn try_decode(&self, instr: (u8, u8)) -> Result<Opcode> {
         let opcode = match instr {
             (0x00, 0xE0) => Opcode::ClearScreen,
@@ -184,7 +184,7 @@ impl CPU {
         let y_index: usize = usize::from(y_index);
 
         let mut vx: u8 = self.vs[x_index];
-        let mut vy: u8 = self.vs[y_index];  
+        let mut vy: u8 = self.vs[y_index];
 
         //starting position of draw should be wrapped
         vx = vx % WIDTH_U8;

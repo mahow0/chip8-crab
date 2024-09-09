@@ -107,9 +107,9 @@ fn main() {
                 }
                 // Round down to nearest 16 bytes
                 let addr = addr & u12::try_from(0xFF0 as u16).unwrap();
-                // Print 8 groups of 2 bytes per row, or "____" if out of range 
+                // Print 8 groups of 2 bytes per row, or "____" if out of range
                 // for three rows above and below the address
-                
+
                 // row above
                 if addr >= u12::from(16) {
                     print!("0x{:04X}: ", u16::from(addr) - 16);
@@ -121,7 +121,7 @@ fn main() {
                         print!("____ ");
                     } else {
                         let ram = cpu.ram();
-                        let line = ram.read_word(addr - u12::from(16) + u12::from(i*2));
+                        let line = ram.read_word(addr - u12::from(16) + u12::from(i * 2));
                         print!("{:04X} ", line)
                     }
                 }
@@ -131,7 +131,7 @@ fn main() {
                 print!("0x{:04X}: ", addr);
                 for i in 0..8 {
                     let ram = cpu.ram();
-                    let line = ram.read_word(addr + u12::from(i*2));
+                    let line = ram.read_word(addr + u12::from(i * 2));
                     print!("{:04X} ", line)
                 }
                 println!();
@@ -143,13 +143,11 @@ fn main() {
                         print!("____ ");
                     } else {
                         let ram = cpu.ram();
-                        let line = ram.read_word(addr + u12::from(16) + u12::from(i*2));
+                        let line = ram.read_word(addr + u12::from(16) + u12::from(i * 2));
                         print!("{:04X} ", line)
                     }
                 }
                 println!();
-
-                
             }
 
             Command::Load => {
@@ -158,22 +156,20 @@ fn main() {
                 if new_cpu.is_err() {
                     println!("Could not load program: {}", filename);
                     println!("{:?}", new_cpu);
-                    continue
+                    continue;
                 }
                 cpu = new_cpu.unwrap();
             }
 
-            Command::Run => {
-                loop {
-                    if breakpoints.contains(&cpu.program_counter()) {
-                        println!("Breakpoint hit at: {:#X}", cpu.program_counter());
-                        break;
-                    }
-                    if let Err(err) = cpu.step() {
-                        cpu.view();
-                        println!("Error: {}", err);
-                        break;
-                    }
+            Command::Run => loop {
+                if breakpoints.contains(&cpu.program_counter()) {
+                    println!("Breakpoint hit at: {:#X}", cpu.program_counter());
+                    break;
+                }
+                if let Err(err) = cpu.step() {
+                    cpu.view();
+                    println!("Error: {}", err);
+                    break;
                 }
             },
 
@@ -202,10 +198,15 @@ fn main() {
                 let instr_hex = cpu.ram().read_word(pc);
                 let instr = ((instr_hex >> 8) as u8, instr_hex as u8);
                 match cpu.try_decode(instr) {
-                    Ok(opcode) => println!("Instruction @ pc: 0x{:04X} | Decoded: {:?}", instr_hex, opcode),
-                    Err(_) => println!("Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE", instr_hex),
+                    Ok(opcode) => println!(
+                        "Instruction @ pc: 0x{:04X} | Decoded: {:?}",
+                        instr_hex, opcode
+                    ),
+                    Err(_) => println!(
+                        "Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE",
+                        instr_hex
+                    ),
                 }
-            
             }
 
             Command::View => {
@@ -228,10 +229,9 @@ fn main() {
                     if result.is_err() {
                         cpu.view();
                         println!("Error: {}", result.unwrap_err());
-                        break
+                        break;
                     }
                 }
-
             }
 
             Command::Breakpoint => {
@@ -240,7 +240,7 @@ fn main() {
                     println!("Could not parse breakpoint: {}", rest);
                     println!("{:?}", addr);
                     continue;
-                } 
+                }
                 let addr = addr.unwrap();
 
                 if breakpoints.contains(&addr) {
@@ -250,7 +250,6 @@ fn main() {
                     println!("Adding breakpoint when the pc is {:#X}", addr);
                     breakpoints.push(addr);
                 }
-
             }
 
             _ => {}
