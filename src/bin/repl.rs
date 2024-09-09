@@ -107,7 +107,7 @@ fn main() {
                 }
                 // Round down to nearest 16 bytes
                 let addr = addr & u12::try_from(0xFF0 as u16).unwrap();
-                // Print 4 groups of 4 bytes per row, or "____" if out of range 
+                // Print 4 groups of 2 bytes per row, or "____" if out of range 
                 // for three rows above and below the address
                 
                 // row above
