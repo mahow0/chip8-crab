@@ -185,21 +185,25 @@ fn main() {
                 cpu = new_cpu.unwrap();
             }
 
-            Command::Run => loop {
-                if breakpoints.contains(&cpu.program_counter()) {
-                    println!("Breakpoint hit at: {:#X}", cpu.program_counter());
-                    break;
-                }
+            Command::Run => {
 
-                if let Err(err) = cpu.step() {
-                    cpu.view();
-                    println!("Error: {}", err);
-                    break;
-                }
+                println!("Running... press Ctrl-C to pause");
+                loop {
+                    if breakpoints.contains(&cpu.program_counter()) {
+                        println!("Breakpoint hit at: {:#X}", cpu.program_counter());
+                        break;
+                    }
 
-                if terminate.lock().unwrap().clone() >= 1 {
-                    println!("Pausing execution...");
-                    break;
+                    if let Err(err) = cpu.step() {
+                        cpu.view();
+                        println!("Error: {}", err);
+                        break;
+                    }
+
+                    if terminate.lock().unwrap().clone() >= 1 {
+                        println!("Pausing execution...");
+                        break;
+                    }
                 }
             },
 
