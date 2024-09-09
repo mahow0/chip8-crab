@@ -2,6 +2,7 @@ use chip8_crab::cpu::*;
 use chip8_crab::error::*;
 use chip8_crab::loader;
 use regex::Regex;
+use std::sync::{Arc, Mutex};
 use ux::*;
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
@@ -69,12 +70,34 @@ enum Command {
 fn main() {
     let mut cpu = CPU::new();
     let mut breakpoints = Vec::new();
+    let terminate = Arc::new(Mutex::new(0));
+    let terminate_clone = terminate.clone();
+
+
+    ctrlc::set_handler(move || {
+        let mut terminate = terminate_clone.lock().unwrap();
+        *terminate += 1;
+        if *terminate > 1 {
+            std::process::exit(0);
+        }
+        println!();
+        println!("Press Ctrl-C again or type 'quit' to exit");
+    }).expect("Error setting Ctrl-C handler");
+
     loop {
         // TODO: figure out how to print without new line
+
         println!("Enter a command: ");
 
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
+        {
+            let mut terminate = terminate.lock().unwrap();
+            if *terminate >= 2 {
+                break;
+            }
+            *terminate = 0;
+        }
 
         let result = parse_command(&input);
         if result.is_err() {
@@ -166,9 +189,15 @@ fn main() {
                     println!("Breakpoint hit at: {:#X}", cpu.program_counter());
                     break;
                 }
+
                 if let Err(err) = cpu.step() {
                     cpu.view();
                     println!("Error: {}", err);
+                    break;
+                }
+
+                if terminate.lock().unwrap().clone() >= 1 {
+                    println!("Pausing execution...");
                     break;
                 }
             },
@@ -252,7 +281,10 @@ fn main() {
                 }
             }
 
-            _ => {}
+            Command::Quit => {
+                break;
+            }
+
         }
     }
 }
