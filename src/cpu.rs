@@ -34,13 +34,16 @@ pub fn nibtrio_2_u12(trio: (u4, u4, u4)) -> u12 {
     let mut twelve: u12 = 0.into();
     let (nib_1, nib_2, nib_3) = trio;
 
-    twelve = twelve + nib_1.into();
-    twelve = twelve << 8;
+    let mut nib_1_u12 : u12 = nib_1.into();
+    nib_1_u12 = nib_1_u12 << 8;
+    twelve = twelve + nib_1_u12;
 
-    twelve = twelve + nib_2.into();
-    twelve = twelve << 4;
+    let mut nib_2_u12 : u12 = nib_2.into();
+    nib_2_u12 = nib_2_u12 << 4;
+    twelve = twelve + nib_2_u12;
 
     twelve = twelve + nib_3.into();
+
     twelve
 }
 
@@ -181,7 +184,7 @@ impl CPU {
         let y_index: usize = usize::from(y_index);
 
         let mut vx: u8 = self.vs[x_index];
-        let mut vy: u8 = self.vs[y_index];
+        let mut vy: u8 = self.vs[y_index];  
 
         //starting position of draw should be wrapped
         vx = vx % WIDTH_U8;
@@ -199,7 +202,7 @@ impl CPU {
                 }
 
                 //Grab the ``col``th pixel in sprite row
-                let sprite_pixel = (sprite_row >> col) & (0x01);
+                let sprite_pixel = (sprite_row >> (7 - col)) & (0x01);
 
                 let screen_x = usize::from(vx + col);
                 let screen_y = usize::from(vy);
