@@ -199,7 +199,7 @@ fn main() {
                 }
                 println!("PC: {:#X}", cpu.program_counter());
                 let instr = cpu.fetch();
-                let instr_hex = instr.0 << 2 | instr.1;
+                let instr_hex = instr.0 << 8 | instr.1;
                 match cpu.try_decode(instr) {
                     Ok(opcode) => println!("Instruction @ pc: 0x{:04X} | Decoded: {:?}", instr_hex, opcode),
                     Err(_) => println!("Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE", instr_hex),
