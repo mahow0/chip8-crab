@@ -208,7 +208,14 @@ impl CPU {
     }
 
     pub fn view(&self) -> () {
+        print!("   ");
+        for _ in 0..WIDTH {
+            print!("-");
+        }
+        println!();
         for y in 0..HEIGHT {
+            print!("{:02}", y);
+            print!("|");
             for x in 0..WIDTH {
                 let pixel = self.vram[x][y];
                 if pixel {
@@ -217,7 +224,13 @@ impl CPU {
                     print!(" ");
                 }
             }
-            println!();
+            println!("|");
         }
+
+        print!("   ");
+        for _ in 0..WIDTH {
+            print!("-");
+        }
+        println!();
     }
 }
