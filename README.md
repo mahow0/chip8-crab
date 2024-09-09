@@ -61,6 +61,14 @@ e 0x00e0         # same as above
 
 view             # prints the current state of the vram
 v                # same as above
+
+memory          # prints the current state of the memory around the program counter
+m               # same as above
+mem             # same as above
+
+memory 0x2FF    # prints the current state of the memory around the address 0x2FF
+m 0x2FF         # same as above
+
 ```
 
 # References
