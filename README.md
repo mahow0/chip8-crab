@@ -34,6 +34,35 @@ execute <0xNNNN> - executes a hex command on the CPU
 view - prints the vram
 ```
 
+Usage examples:
+
+```
+load roms/pong.ch8 # loads a file located at roms/pong.ch8 to CPU
+l roms/pong.ch8    # same as above
+
+run              # runs the CPU until it crashes
+r                # same as above
+
+step             # steps one instruction
+s                # same as above
+
+s 100            # steps 0x100 instructions
+s 0x100          # same as above 
+
+
+debug            # prints the current state of the CPU
+d                # same as above
+
+breakpoint 0x200 # sets a breakpoint when pc @ 0x200
+b 0x200          # same as above
+
+execute 0x00e0   # executes the command 0x00e0 on the CPU 
+e 0x00e0         # same as above
+
+view             # prints the current state of the vram
+v                # same as above
+```
+
 # References
 
 - [Guide to making a CHIP-8 emulator](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#display)
