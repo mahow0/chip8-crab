@@ -5,6 +5,7 @@ use ux::*;
 const SIZE: usize = 4096;
 const PROGRAM_START: usize = 0x200;
 
+#[derive(Debug, Clone)]
 pub struct Memory {
     mem: [u8; SIZE],
 }
