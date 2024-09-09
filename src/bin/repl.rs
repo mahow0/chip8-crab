@@ -20,16 +20,17 @@ fn parse_command(command: &str) -> Result<(Command, String)> {
         }
 
         "v" | "vi" | "vie" | "view" => Ok((Command::View, rest)),
+        "b" | "br" | "bre" | "brea" | "break" | "breakpoint" => Ok((Command::Breakpoint, rest)),
         _ => Err(Chip8Error::CommandParseError(command.to_string())),
     }
 }
 
-fn parse_instruction(instruction: &str) -> Result<u16> {
-    let re = Regex::new(r"(0x)?([0-9A-Fa-f]{4,6})").unwrap();
-    let cap = re.captures(instruction).expect("Capture failed");
+fn parse_hex(input: &str) -> Result<u16> {
+    let re = Regex::new(r"(0x)?([0-9A-Fa-f]{1,6})").unwrap();
+    let cap = re.captures(input).expect("Capture failed");
     let hex = cap.get(2);
     if hex.is_none() {
-        return Err(Chip8Error::InstructionParseError(instruction.to_string()));
+        return Err(Chip8Error::InstructionParseError(input.to_string()));
     }
     let hex = hex.unwrap().as_str();
     let hex = u16::from_str_radix(hex, 16);
@@ -56,10 +57,14 @@ enum Command {
     Execute,
     /// View the current vram
     View,
+    /// Toggles a breakpoint on the pc of the CPU
+    /// If a breakpoint is hit, the CPU will pause execution and return to the REPL
+    Breakpoint,
 }
 
 fn main() {
     let mut cpu = CPU::new();
+    let mut breakpoints = Vec::new();
     loop {
         // TODO: figure out how to print without new line
         println!("Enter a command: ");
@@ -67,19 +72,35 @@ fn main() {
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
 
-        let (command, rest) = parse_command(&input).expect("execution failed:\n");
+        let result = parse_command(&input);
+        if result.is_err() {
+            println!("Could not parse command: {}", input);
+            println!("{:?}", result);
+            continue;
+        }
+        let (command, rest) = result.unwrap();
 
         match command {
             Command::Load => {
                 let filename = rest.trim();
-                cpu = loader::load_program(&filename).expect("program load failed:\n");
+                let new_cpu = loader::load_program(&filename);
+                if new_cpu.is_err() {
+                    println!("Could not load program: {}", filename);
+                    println!("{:?}", new_cpu);
+                    continue
+                }
+                cpu = new_cpu.unwrap();
             }
 
             Command::Run => {
                 loop {
+                    if breakpoints.contains(&cpu.program_counter()) {
+                        println!("Breakpoint hit at: {:#X}", cpu.program_counter());
+                        break;
+                    }
                     if let Err(err) = cpu.step() {
-                        println!("Error: {}", err);
                         cpu.view();
+                        println!("Error: {}", err);
                         break;
                     }
                 }
@@ -87,7 +108,13 @@ fn main() {
 
             Command::Execute => {
                 println!("Executing: {}", rest);
-                let opcode = parse_instruction(&rest).expect("execution failed:\n");
+                let opcode = parse_hex(&rest);
+                if opcode.is_err() {
+                    println!("Could not parse opcode: {}", rest);
+                    println!("{:?}", opcode);
+                    continue;
+                }
+                let opcode = opcode.unwrap();
                 let (a, b) = (opcode >> 8, opcode & 0x00FF);
                 let (a, b) = (a as u8, b as u8);
                 let decoded_opcode = cpu.decode((a, b));
@@ -99,6 +126,7 @@ fn main() {
                 for i in 0..16 {
                     println!("V{:X}: {}", i, cpu.vs[i]);
                 }
+                println!("PC: {:#X}", cpu.program_counter());
             }
 
             Command::View => {
@@ -106,7 +134,44 @@ fn main() {
             }
 
             Command::Step => {
-                cpu.step().expect("step failed:\n");
+                let mut steps = 1;
+                if rest.trim().len() > 0 {
+                    let result = parse_hex(&rest);
+                    if result.is_err() {
+                        println!("Could not parse number of steps: {}", rest);
+                        println!("{:?}", steps);
+                        continue;
+                    }
+                    steps = result.unwrap();
+                }
+                for _ in 0..steps {
+                    let result = cpu.step();
+                    if result.is_err() {
+                        println!("Error: {}", result.unwrap_err());
+                        cpu.view();
+                        break
+                    }
+                }
+
+            }
+
+            Command::Breakpoint => {
+                let addr = parse_hex(&rest);
+                if addr.is_err() {
+                    println!("Could not parse breakpoint: {}", rest);
+                    println!("{:?}", addr);
+                    continue;
+                } 
+                let addr = addr.unwrap();
+
+                if breakpoints.contains(&addr) {
+                    println!("Removing breakpoint when the pc is {:#X}", addr);
+                    breakpoints.retain(|&x| x != addr);
+                } else {
+                    println!("Adding breakpoint when the pc is {:#X}", addr);
+                }
+
+                breakpoints.push(addr);
             }
 
             _ => {}
@@ -259,6 +324,33 @@ pub mod repl_tests {
 
         let (command, rest) = parse_command("e test").unwrap();
         assert_eq!(command, Command::Execute);
+        assert_eq!(rest, " test");
+    }
+
+    #[test]
+    pub fn test_parse_breakpoint_command() {
+        let (command, rest) = parse_command("breakpoint test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("break test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("brea test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("bre test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("br test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
+        assert_eq!(rest, " test");
+
+        let (command, rest) = parse_command("b test").unwrap();
+        assert_eq!(command, Command::Breakpoint);
         assert_eq!(rest, " test");
     }
 }

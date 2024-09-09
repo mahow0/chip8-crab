@@ -8,6 +8,7 @@ const WIDTH: usize = 64;
 const HEIGHT_U8: u8 = 32;
 const WIDTH_U8: u8 = 64;
 
+#[derive(Debug, Clone)]
 pub struct CPU {
     ram: Memory,                   // 4kB of RAM
     vram: [[bool; HEIGHT]; WIDTH], //vram containing pixel values, stored in column-major order
@@ -232,5 +233,9 @@ impl CPU {
             print!("-");
         }
         println!();
+    }
+
+    pub fn program_counter(&self) -> u16 {
+        u12::into(self.pc)
     }
 }
