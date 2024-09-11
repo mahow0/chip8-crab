@@ -47,6 +47,18 @@ pub fn nibtrio_2_u12(trio: (u4, u4, u4)) -> u12 {
     twelve
 }
 
+pub fn nib_to_usize(nib : u4) -> usize {
+    let wide : u8 = nib.into();
+    wide.into()
+}
+
+pub fn upper_nib(byte : u8) -> u4 {
+    ((byte & (0xF0)) >> 4).try_into().unwrap()
+} 
+pub fn lower_nib(byte : u8) -> u4 {
+    (byte & (0x0F)).try_into().unwrap()
+} 
+
 #[derive(Debug, Clone)]
 pub enum Opcode {
     ClearScreen,
@@ -55,6 +67,28 @@ pub enum Opcode {
     AddReg(u4, u8),
     SetI(u12),
     Display(u4, u4, u4),
+    // Control flow instructions
+    SkipEqImm(u4, u8),
+    SkipNeqImm(u4, u8),
+    SkipEqReg(u4, u4),
+    SkipNeqReg(u4, u4),
+    // Subroutine call 
+    CallSubroutine(u12),
+    Return,
+    //Arithmetic and logical instructions 
+    Set(u4, u4), 
+    Or(u4, u4),
+    And(u4, u4),
+    Xor(u4, u4),
+    Add(u4, u4),
+    Subtract1(u4, u4), // VX - VY
+    Subtract2(u4, u4), // VY - VX
+    ShiftR(u4, u4),
+    ShiftL(u4, u4),
+    Store(u4),
+    Load(u4),
+    Decimal(u4),
+    AddToIndex(u4)
 }
 
 impl CPU {
@@ -66,7 +100,7 @@ impl CPU {
         CPU {
             ram: ram,
             vram: [[false; HEIGHT]; WIDTH],
-            stack: vec![0; 16],
+            stack: vec![],
             pc: (0x200u16).try_into().unwrap(),
             index: 0x0.into(),
             vs: [0; 16],
@@ -131,6 +165,66 @@ impl CPU {
                 let NibblePair(nib_2, nib_3) = byte_2.into();
                 Opcode::Display(nib_1, nib_2, nib_3)
             }
+            (byte_1 @ 0x30..=0x3F, byte_2) => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                Opcode::SkipEqImm(nib_1, byte_2)
+
+            }
+            // 4XNN
+            (byte_1 @ 0x40..=0x4F, byte_2) => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                Opcode::SkipNeqImm(nib_1, byte_2)
+
+            }
+            
+            // 5XY0
+            (byte_1 @ 0x50..=0x5F, byte_2) if lower_nib(byte_2) == (0u8).try_into().unwrap() => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                let NibblePair(nib_2, _) = byte_2.into();
+                Opcode::SkipEqReg(nib_1, nib_2)
+            }
+
+            // 9XY0 
+            (byte_1 @ 0x90..=0x9F, byte_2) if lower_nib(byte_2) == (0u8).try_into().unwrap() => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                let NibblePair(nib_2, _) = byte_2.into();
+                Opcode::SkipNeqReg(nib_1, nib_2)
+            }
+
+            // 2NNN 
+            (byte_1 @ 0x20..=0x2F, byte_2) => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                let NibblePair(nib_2, nib_3) = byte_2.into();
+                Opcode::CallSubroutine(nibtrio_2_u12((nib_1, nib_2, nib_3)))
+            }
+
+            // 00EE
+            (0x00, 0xEE) => Opcode::Return,
+
+            (byte_1 @ 0x80..=0x8F, byte_2) => {
+               self.decode_logarith((byte_1, byte_2)).unwrap()
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x55) => {
+                Opcode::Store(lower_nib(byte_1))
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x65) => {
+                Opcode::Load(lower_nib(byte_1))
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x33) => {
+                Opcode::Decimal(lower_nib(byte_1))
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x1E) => {
+                Opcode::AddToIndex(lower_nib(byte_1))
+            }
+
+
+
+
+            
             _ => {
                 return Err(Chip8Error::DecodeError {
                     instr,
@@ -139,6 +233,41 @@ impl CPU {
             }
         };
         Ok(opcode)
+    }
+
+    // Decodes logical and arithmetic instructions; assumes that the upper byte of the instruction is in the 
+    // range 0x80..0x8F
+    pub fn decode_logarith(&self, (byte_1, byte_2): (u8, u8)) -> Result<Opcode>{
+        if !(0x80..=0x8F).contains(&byte_1) {
+            return Err(Chip8Error::DecodeError {
+                instr: (byte_1, byte_2),
+                reason : "Upper byte of supposed logical or arithmetic instruction is not within range 0x80..0x8F".to_string(),
+            })
+        }
+
+        else {
+            let x = lower_nib(byte_1);
+            let y = upper_nib(byte_2);
+            match u8::from(lower_nib(byte_2)) {
+                0x0 => Ok(Opcode::Set(x, y)),
+                0x1 => Ok(Opcode::Or(x, y)),
+                0x2 => Ok(Opcode::And(x, y)),
+                0x3 => Ok(Opcode::Xor(x,y)),
+                0x4 => Ok(Opcode::Add(x,y)),
+                0x5 => Ok(Opcode::Subtract1(x, y)),
+                0x7 => Ok(Opcode::Subtract2(x, y)),
+                0x6 => Ok(Opcode::ShiftR(x, y)),
+                0xE => Ok(Opcode::ShiftL(x, y)),
+                _ => {
+                    return Err(Chip8Error::DecodeError {
+                        instr : (byte_1, byte_2),
+                        reason: "No decoding implementation found for this hex range".to_string(),
+                    })
+                }
+
+            }
+        }
+
     }
 
     /* Executes the instruction indicated by ``opcode`` */
@@ -150,6 +279,27 @@ impl CPU {
             Opcode::AddReg(reg, value) => self.op_7xnn(reg, value),
             Opcode::SetI(addr) => self.op_annn(addr),
             Opcode::Display(x, y, n) => self.op_dxyn(x, y, n),
+            Opcode::SkipEqImm(x, nn) => self.op_3xnn(x, nn),
+            Opcode::SkipNeqImm(x, nn) => self.op_4xnn(x, nn),
+            Opcode::SkipEqReg(x, y) => self.op_5xy0(x, y),
+            Opcode::SkipNeqReg(x, y) => self.op_9xy0(x, y),
+            Opcode::CallSubroutine(nnn) => self.op_2nnn(nnn),
+            Opcode::Return => self.op_00ee(),
+            Opcode::Set(x, y) => self.op_8xy0(x, y),
+            Opcode::Or(x, y) => self.op_8xy1(x, y),
+            Opcode::And(x, y) => self.op_8xy2(x, y),
+            Opcode::Xor(x, y) => self.op_8xy3(x, y),
+            Opcode::Add(x, y) => self.op_8xy4(x, y),
+            Opcode::Subtract1(x, y) => self.op_8xy5(x, y),
+            Opcode::Subtract2(x, y) => self.op_8xy7(x, y),
+            Opcode::ShiftR(x, y) => self.op_8xy6_modern(x, y),
+            Opcode::ShiftL(x, y) => self.op_8xye_modern(x, y),
+            Opcode::Store(x) => self.op_fx55_modern(x),
+            Opcode::Load(x) => self.op_fx65_modern(x),
+            Opcode::Decimal(x) => self.op_fx33(x),
+            Opcode::AddToIndex(x) => self.op_fx1e(x)
+        
+            
         }
     }
 
@@ -169,7 +319,7 @@ impl CPU {
 
     fn op_7xnn(&mut self, x: u4, nn: u8) {
         let index: u8 = x.into();
-        self.vs[usize::from(index)] = self.vs[usize::from(index)] + nn
+        self.vs[usize::from(index)] = self.vs[usize::from(index)].wrapping_add(nn)
     }
 
     fn op_annn(&mut self, nnn: u12) {
@@ -220,6 +370,211 @@ impl CPU {
             vy += 1;
         }
     }
+
+
+
+    fn skip_opcode(&mut self) -> () {
+        self.pc = self.pc + 2.into();
+    }
+    fn op_3xnn(&mut self, x  : u4, nn : u8) -> () {
+        let index : usize = nib_to_usize(x);
+        if (self.vs[index] == nn) {
+            self.skip_opcode();
+        }
+    }
+
+    fn op_4xnn(&mut self, x  : u4, nn : u8) -> () {
+        let index: usize = nib_to_usize(x);
+        if (self.vs[index] != nn) {
+            self.skip_opcode();
+        }
+    }
+
+    fn op_5xy0(&mut self, x : u4, y : u4) -> () {
+        let index_x : usize = nib_to_usize(x);
+        let index_y : usize = nib_to_usize(y);
+
+        if (self.vs[index_x] == self.vs[index_y]) {
+            self.skip_opcode();
+        }
+
+
+    }
+
+    fn op_9xy0(&mut self, x : u4, y : u4) -> () {
+        let index_x : usize = nib_to_usize(x);
+        let index_y : usize = nib_to_usize(y);
+
+        if (self.vs[index_x] != self.vs[index_y]) {
+            self.skip_opcode();
+        }
+    }
+
+    fn op_2nnn(&mut self, nnn : u12) -> () {
+        self.stack.push(self.pc.into());
+        self.pc = nnn;
+    }
+
+    fn op_00ee(&mut self) -> () {
+        let return_addr = self.stack.pop().unwrap();
+        self.pc = return_addr.try_into().unwrap();
+    }
+
+    fn load_from(&self, reg : u4) -> u8 {
+        self.vs[nib_to_usize(reg)]
+    }
+
+    fn save_to(&mut self, reg : u4, val : u8) -> () {
+        self.vs[nib_to_usize(reg)] = val
+    }
+
+    fn op_8xy0(&mut self, x : u4, y : u4) -> () {
+        let vy = self.load_from(y);
+        self.save_to(x, vy)
+    }
+
+    // Bitwise OR
+    fn op_8xy1(&mut self, x : u4, y : u4) -> () { 
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        self.save_to(x, vx | vy)
+    }
+    // Bitwise AND
+    fn op_8xy2(&mut self, x : u4, y : u4) -> () { 
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        self.save_to(x, vx & vy)
+    }
+    // Bitwise XOR
+    fn op_8xy3(&mut self, x : u4, y : u4) -> () { 
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        self.save_to(x, vx ^ vy)
+    }
+    // Add
+    fn op_8xy4(&mut self, x : u4, y : u4) -> () { 
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        let (add, carry) =  vx.checked_add(vy).map_or_else(
+        || {(vx.wrapping_add(vy), true)}, 
+        |v| {(v, false)}
+        );
+
+        if carry {
+            self.vs[0xF] = 0x1;
+        }
+        else {
+            self.vs[0xF] = 0x0;
+        }
+
+        self.save_to(x, add);
+    }
+
+    // Subtract (Variant 1) : VX - VY
+    fn op_8xy5(&mut self, x : u4, y : u4) -> () { 
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        let (sub, carry) =  vx.checked_sub(vy).map_or_else(
+        || {(vx.wrapping_sub(vy), true)}, 
+        |v| {(v, false)}
+        );
+
+        if carry {
+            self.vs[0xF] = 0x0;
+        }
+        else {
+            self.vs[0xF] = 0x1;
+        }
+
+        self.save_to(x, sub);
+    }
+    // Subtract (Variant 2) : VY - VX
+    fn op_8xy7(&mut self, x : u4, y : u4) -> () {
+        let vx = self.load_from(x);
+        let vy = self.load_from(y);
+        let (sub, carry) =  vy.checked_sub(vx).map_or_else(
+        || {(vy.wrapping_sub(vx), true)}, 
+        |v| {(v, false)}
+        );
+
+        if carry {
+            self.vs[0xF] = 0x0;
+        }
+        else {
+            self.vs[0xF] = 0x1;
+        }
+
+        self.save_to(x, sub);
+    }
+    // Returns the last bit of a byte
+    fn last_bit(&self, byte : u8) -> u8 {
+        byte & (0x01)
+    }
+    // Returns first bit of a byte 
+    fn first_bit(&self, byte : u8) -> u8 {
+        byte & (0x08) >> 3
+    }
+
+    // Right shift (logical) 
+    fn op_8xy6_modern(&mut self, x : u4, _y : u4) -> () {
+        let vx = self.load_from(x);
+        self.vs[0xF] = self.last_bit(vx);
+
+        self.save_to(x, vx >> 1);
+
+    }
+
+    // Left shift (logical) 
+    fn op_8xye_modern(&mut self, x : u4, _y : u4) -> () {
+        let vx = self.load_from(x);
+        self.vs[0xF] = self.first_bit(vx);
+
+        self.save_to(x, vx << 1);
+    }
+
+    // Store
+    fn op_fx55_modern(&mut self, x : u4) -> () {
+        let index : u12 = self.index;
+        let last_reg : u8 = x.into();
+        for i in (0..=last_reg) {
+            let val = self.load_from(i.try_into().unwrap());
+            self.ram.write(index + i.into(), val)
+        }
+    }
+
+    // Load
+    fn op_fx65_modern(&mut self, x : u4) -> () {
+        let index : u12 = self.index;
+        let last_reg : u8 = x.into();
+        for i in (0..=last_reg) {
+            let val = self.ram.read(index + i.into());
+            self.save_to(i.try_into().unwrap(), val);
+        }
+    }
+
+
+    // Decimal conversion
+    fn op_fx33(&mut self, x : u4) -> () {
+        let vx = self.load_from(x);
+        let first_digit = vx/100;
+        let second_digit = (vx % 100)/10;
+        let third_digit = vx % 10;
+
+        let index = self.index;
+        self.ram.write(index, first_digit);
+        self.ram.write(index + 1.into(), second_digit);
+        self.ram.write(index + 2.into(), third_digit);
+    }
+
+    fn op_fx1e(&mut self, x : u4) -> () {
+        let vx = self.load_from(x);
+        self.index = self.index + vx.into();
+        //Note: Some interpreters would set the carry flag if the index register overflow from 0xFFF to 0x1000+ (outside of addressable range),
+        // consider adding an option to do
+    }
+
+
+    
 
     pub fn view(&self) -> () {
         print!("   ");
