@@ -40,7 +40,7 @@ Usage examples:
 load roms/pong.ch8 # loads a file located at roms/pong.ch8 to a new CPU
 l roms/pong.ch8    # same as above
 
-run              # runs the CPU until it crashes
+run              # runs the CPU until it crashes, the program ends, or a breakpoint is hit
 r                # same as above
 
 step             # steps one instruction
