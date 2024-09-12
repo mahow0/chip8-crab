@@ -90,6 +90,10 @@ pub enum Opcode {
     // Memory instructions
     Store(u4),
     Load(u4),
+    //Timers
+    SetRegToDelay(u4),
+    SetDelayToReg(u4),
+    SetSoundToReg(u4),
     // Miscellaneous
     Decimal(u4),
     AddToIndex(u4),
@@ -236,6 +240,17 @@ impl CPU {
             (byte_1 @ 0xF0..=0xFF, 0x29) => {
                 Opcode::Font(lower_nib(byte_1))
             }
+            (byte_1 @ 0xF0..=0xFF,0x07) => {
+                Opcode::SetRegToDelay(lower_nib(byte_1))
+            }
+
+            (byte_1 @ 0xF0..=0xFF,0x15) => {
+                Opcode::SetDelayToReg(lower_nib(byte_1))
+            }
+
+            (byte_1 @ 0xF0..=0xFF,0x18) => {
+                Opcode::SetSoundToReg(lower_nib(byte_1))
+            }
 
 
 
@@ -315,6 +330,9 @@ impl CPU {
             Opcode::AddToIndex(x) => self.op_fx1e(x),
             Opcode::Random(x, nn) => self.op_cxnn(x, nn),
             Opcode::Font(x) => self.op_fx29(x),
+            Opcode::SetRegToDelay(x) => self.op_fx07(x),
+            Opcode::SetDelayToReg(x) => self.op_fx15(x),
+            Opcode::SetSoundToReg(x) => self.op_fx18(x)
             
         }
     }
@@ -600,6 +618,18 @@ impl CPU {
         let vx = self.load_from(x);
         let sprite_addr = (vx & (0x0F)) * 0x5;
         self.index = sprite_addr.into();
+    }
+
+    fn op_fx07(&mut self, x : u4) -> () {
+        self.save_to(x, self.delay)
+    }
+
+    fn op_fx15(&mut self, x : u4) -> () {
+        self.delay = self.load_from(x)
+    }
+
+    fn op_fx18(&mut self, x : u4) -> () {
+        self.beep = self.load_from(x)
     }
 
 
