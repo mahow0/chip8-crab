@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.87"
+ctrlc = "3.4.5"
 derive_more = { version = "1.0.0", features = ["full"] }
 regex = { version = "1.10.6" }
+sdl2 = "0.37.0"
 thiserror = "1.0.63"
 ux = "0.1.6"

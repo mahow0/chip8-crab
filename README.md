@@ -20,18 +20,18 @@ A Chip-8 emulator written in Rust
 To run the emulator, use the following command:
 
 ```bash
+cargo run --bin main
+```
+
+If an error occurs, be sure that [SDL2](https://github.com/Rust-SDL2/rust-sdl2?tab=readme-ov-file#requirements) is installed on your system.
+
+
+## Running the REPL debugger
+ 
+To run the , use the following command:
+
+```bash
 cargo run --bin repl
-```
-
-commands:
-
-```
-load <filename> - loads a file into the cpu but does not execute it
-run - steps on instructions in the current cpu until it crashes
-step - steps one instruction (fetch -> decode -> execute)
-debug - views debug information (registers rn)
-execute <0xNNNN> - executes a hex command on the CPU 
-view - prints the vram
 ```
 
 Usage examples:
@@ -40,7 +40,7 @@ Usage examples:
 load roms/pong.ch8 # loads a file located at roms/pong.ch8 to a new CPU
 l roms/pong.ch8    # same as above
 
-run              # runs the CPU until it crashes
+run              # runs the CPU until it crashes, the program ends, or a breakpoint is hit
 r                # same as above
 
 step             # steps one instruction

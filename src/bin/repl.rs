@@ -2,6 +2,7 @@ use chip8_crab::cpu::*;
 use chip8_crab::error::*;
 use chip8_crab::loader;
 use regex::Regex;
+use std::sync::{Arc, Mutex};
 use ux::*;
 
 fn parse_command(command: &str) -> Result<(Command, String)> {
@@ -49,9 +50,11 @@ fn parse_hex(input: &str) -> Result<u16> {
 enum Command {
     /// Load a ROM into the CPU but do not yet execute it
     Load,
-    /// Load the instructions stored in CPU memory
+    /// Steps the CPU until it halts, a breakpoint is hit, or an error occurs
     Run,
+    ///  Steps the CPU by one instruction or optionally a specified number of times
     Step,
+    /// Exits the program
     Quit,
     /// Print the state of the CPU (registers)
     Debug,
@@ -69,12 +72,34 @@ enum Command {
 fn main() {
     let mut cpu = CPU::new();
     let mut breakpoints = Vec::new();
+    let terminate = Arc::new(Mutex::new(0));
+    let terminate_clone = terminate.clone();
+
+
+    ctrlc::set_handler(move || {
+        let mut terminate = terminate_clone.lock().unwrap();
+        *terminate += 1;
+        if *terminate > 1 {
+            std::process::exit(0);
+        }
+        println!();
+        println!("Press Ctrl-C again or type 'quit' to exit");
+    }).expect("Error setting Ctrl-C handler");
+
     loop {
         // TODO: figure out how to print without new line
+
         println!("Enter a command: ");
 
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
+        {
+            let mut terminate = terminate.lock().unwrap();
+            if *terminate >= 2 {
+                break;
+            }
+            *terminate = 0;
+        }
 
         let result = parse_command(&input);
         if result.is_err() {
@@ -107,9 +132,9 @@ fn main() {
                 }
                 // Round down to nearest 16 bytes
                 let addr = addr & u12::try_from(0xFF0 as u16).unwrap();
-                // Print 8 groups of 2 bytes per row, or "____" if out of range 
+                // Print 8 groups of 2 bytes per row, or "____" if out of range
                 // for three rows above and below the address
-                
+
                 // row above
                 if addr >= u12::from(16) {
                     print!("0x{:04X}: ", u16::from(addr) - 16);
@@ -121,7 +146,7 @@ fn main() {
                         print!("____ ");
                     } else {
                         let ram = cpu.ram();
-                        let line = ram.read_word(addr - u12::from(16) + u12::from(i*2));
+                        let line = ram.read_word(addr - u12::from(16) + u12::from(i * 2));
                         print!("{:04X} ", line)
                     }
                 }
@@ -131,7 +156,7 @@ fn main() {
                 print!("0x{:04X}: ", addr);
                 for i in 0..8 {
                     let ram = cpu.ram();
-                    let line = ram.read_word(addr + u12::from(i*2));
+                    let line = ram.read_word(addr + u12::from(i * 2));
                     print!("{:04X} ", line)
                 }
                 println!();
@@ -143,13 +168,11 @@ fn main() {
                         print!("____ ");
                     } else {
                         let ram = cpu.ram();
-                        let line = ram.read_word(addr + u12::from(16) + u12::from(i*2));
+                        let line = ram.read_word(addr + u12::from(16) + u12::from(i * 2));
                         print!("{:04X} ", line)
                     }
                 }
                 println!();
-
-                
             }
 
             Command::Load => {
@@ -158,20 +181,28 @@ fn main() {
                 if new_cpu.is_err() {
                     println!("Could not load program: {}", filename);
                     println!("{:?}", new_cpu);
-                    continue
+                    continue;
                 }
                 cpu = new_cpu.unwrap();
             }
 
             Command::Run => {
+
+                println!("Running... press Ctrl-C to pause");
                 loop {
                     if breakpoints.contains(&cpu.program_counter()) {
                         println!("Breakpoint hit at: {:#X}", cpu.program_counter());
                         break;
                     }
+
                     if let Err(err) = cpu.step() {
                         cpu.view();
                         println!("Error: {}", err);
+                        break;
+                    }
+
+                    if terminate.lock().unwrap().clone() >= 1 {
+                        println!("Pausing execution...");
                         break;
                     }
                 }
@@ -202,10 +233,15 @@ fn main() {
                 let instr_hex = cpu.ram().read_word(pc);
                 let instr = ((instr_hex >> 8) as u8, instr_hex as u8);
                 match cpu.try_decode(instr) {
-                    Ok(opcode) => println!("Instruction @ pc: 0x{:04X} | Decoded: {:?}", instr_hex, opcode),
-                    Err(_) => println!("Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE", instr_hex),
+                    Ok(opcode) => println!(
+                        "Instruction @ pc: 0x{:04X} | Decoded: {:?}",
+                        instr_hex, opcode
+                    ),
+                    Err(_) => println!(
+                        "Instruction @ pc: 0x{:04X} | Decoded: INVALID_OPCODE",
+                        instr_hex
+                    ),
                 }
-            
             }
 
             Command::View => {
@@ -228,10 +264,9 @@ fn main() {
                     if result.is_err() {
                         cpu.view();
                         println!("Error: {}", result.unwrap_err());
-                        break
+                        break;
                     }
                 }
-
             }
 
             Command::Breakpoint => {
@@ -240,7 +275,7 @@ fn main() {
                     println!("Could not parse breakpoint: {}", rest);
                     println!("{:?}", addr);
                     continue;
-                } 
+                }
                 let addr = addr.unwrap();
 
                 if breakpoints.contains(&addr) {
@@ -250,10 +285,12 @@ fn main() {
                     println!("Adding breakpoint when the pc is {:#X}", addr);
                     breakpoints.push(addr);
                 }
-
             }
 
-            _ => {}
+            Command::Quit => {
+                break;
+            }
+
         }
     }
 }
