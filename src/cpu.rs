@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::memory::Memory;
 use ux::*;
+use rand::{thread_rng, Rng};
 
 const HEIGHT: usize = 32;
 const WIDTH: usize = 64;
@@ -15,7 +16,8 @@ pub struct CPU {
     stack: Vec<u16>,               // stack, comprising of 2-byte values
     pc: u12,                       // program counter
     index: u12,                    // index register "I", used to point to addresses in memory
-    // TODO: decide whether to include timers here, or lift them to main.rs
+    pub delay : u8,                    // delay timer, decremented at a rate of 60Hz until it reaches 0
+    pub beep : u8,                     // sound timer, should emit a beeping sound as long as it's not 0
     pub vs: [u8; 16], // general-purpose registers, labeled V0-VF
 }
 
@@ -85,10 +87,14 @@ pub enum Opcode {
     Subtract2(u4, u4), // VY - VX
     ShiftR(u4, u4),
     ShiftL(u4, u4),
+    // Memory instructions
     Store(u4),
     Load(u4),
+    // Miscellaneous
     Decimal(u4),
-    AddToIndex(u4)
+    AddToIndex(u4),
+    Random(u4, u8),
+    Font(u4)
 }
 
 impl CPU {
@@ -103,6 +109,8 @@ impl CPU {
             stack: vec![],
             pc: (0x200u16).try_into().unwrap(),
             index: 0x0.into(),
+            delay: 0x00,
+            beep: 0x00,
             vs: [0; 16],
         }
     }
@@ -221,6 +229,13 @@ impl CPU {
                 Opcode::AddToIndex(lower_nib(byte_1))
             }
 
+            (byte_1 @ 0xC0..=0xCF, byte_2) => {
+                Opcode::Random(lower_nib(byte_1), byte_2)
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x29) => {
+                Opcode::Font(lower_nib(byte_1))
+            }
 
 
 
@@ -297,8 +312,9 @@ impl CPU {
             Opcode::Store(x) => self.op_fx55_modern(x),
             Opcode::Load(x) => self.op_fx65_modern(x),
             Opcode::Decimal(x) => self.op_fx33(x),
-            Opcode::AddToIndex(x) => self.op_fx1e(x)
-        
+            Opcode::AddToIndex(x) => self.op_fx1e(x),
+            Opcode::Random(x, nn) => self.op_cxnn(x, nn),
+            Opcode::Font(x) => self.op_fx29(x),
             
         }
     }
@@ -571,6 +587,19 @@ impl CPU {
         self.index = self.index + vx.into();
         //Note: Some interpreters would set the carry flag if the index register overflow from 0xFFF to 0x1000+ (outside of addressable range),
         // consider adding an option to do
+    }
+
+    fn op_cxnn(&mut self, x : u4, nn : u8) -> () {
+        let mut rng = thread_rng();
+        let rand : u8 = rng.gen();
+        let result = rand & nn;
+        self.save_to(x, result)
+    }
+
+    fn op_fx29(&mut self, x : u4) -> () {
+        let vx = self.load_from(x);
+        let sprite_addr = (vx & (0x0F)) * 0x5;
+        self.index = sprite_addr.into();
     }
 
 

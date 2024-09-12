@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 ctrlc = "3.4.5"
 derive_more = { version = "1.0.0", features = ["full"] }
+rand = "0.8.5"
 regex = { version = "1.10.6" }
 sdl2 = "0.37.0"
 thiserror = "1.0.63"
