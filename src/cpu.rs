@@ -65,6 +65,7 @@ pub fn lower_nib(byte : u8) -> u4 {
 pub enum Opcode {
     ClearScreen,
     Jump(u12),
+    JumpOffset(u12),
     SetReg(u4, u8),
     AddReg(u4, u8),
     SetI(u12),
@@ -252,9 +253,13 @@ impl CPU {
                 Opcode::SetSoundToReg(lower_nib(byte_1))
             }
 
+            (byte_1 @ 0xB0..=0xBF,byte_2) => {
+                let NibblePair(_, nib_1) = byte_1.into();
+                let NibblePair(nib_2, nib_3) = byte_2.into();
+                Opcode::JumpOffset(nibtrio_2_u12((nib_1, nib_2, nib_3)))
+            }
 
 
-            
             _ => {
                 return Err(Chip8Error::DecodeError {
                     instr,
@@ -332,7 +337,8 @@ impl CPU {
             Opcode::Font(x) => self.op_fx29(x),
             Opcode::SetRegToDelay(x) => self.op_fx07(x),
             Opcode::SetDelayToReg(x) => self.op_fx15(x),
-            Opcode::SetSoundToReg(x) => self.op_fx18(x)
+            Opcode::SetSoundToReg(x) => self.op_fx18(x),
+            Opcode::JumpOffset(nnn) => self.op_bnnn_modern(nnn)
             
         }
     }
@@ -632,9 +638,14 @@ impl CPU {
         self.beep = self.load_from(x)
     }
 
+    fn op_bnnn_modern(&mut self, nnn : u12) -> () {
+        let nnn_16 : u16 = nnn.into(); 
+        let x : u4 = ((nnn_16 & (0xF00)) >> 8).try_into().unwrap();
 
-    
-
+        let vx = self.load_from(x);
+        let addr = nnn + vx.into();
+        self.pc = addr
+    }
     pub fn view(&self) -> () {
         print!("   ");
         for _ in 0..WIDTH {
