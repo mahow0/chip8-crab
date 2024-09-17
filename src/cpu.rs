@@ -3,8 +3,8 @@ use crate::memory::Memory;
 use ux::*;
 use rand::{thread_rng, Rng};
 
-const HEIGHT: usize = 32;
-const WIDTH: usize = 64;
+pub const HEIGHT: usize = 32;
+pub const WIDTH: usize = 64;
 
 const HEIGHT_U8: u8 = 32;
 const WIDTH_U8: u8 = 64;
@@ -12,13 +12,17 @@ const WIDTH_U8: u8 = 64;
 #[derive(Debug, Clone)]
 pub struct CPU {
     ram: Memory,                   // 4kB of RAM
-    vram: [[bool; HEIGHT]; WIDTH], //vram containing pixel values, stored in column-major order
+    pub vram: [[bool; HEIGHT]; WIDTH], //vram containing pixel values, stored in column-major order
     stack: Vec<u16>,               // stack, comprising of 2-byte values
     pc: u12,                       // program counter
     index: u12,                    // index register "I", used to point to addresses in memory
     pub delay : u8,                    // delay timer, decremented at a rate of 60Hz until it reaches 0
     pub beep : u8,                     // sound timer, should emit a beeping sound as long as it's not 0
     pub vs: [u8; 16], // general-purpose registers, labeled V0-VF
+}
+
+enum KeyEvent {
+    KeyPressed(u4)
 }
 
 struct NibblePair(u4, u4);

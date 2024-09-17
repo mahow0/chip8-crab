@@ -4,7 +4,6 @@ use ctrlc;
 fn main() {
     // TODO: convert demo into valid input for emulator
     let codes = run();
-    
     loop {
         if codes.lock().unwrap().len() > 0 {
             println!("{:?}", codes.lock().unwrap());

@@ -23,6 +23,7 @@ To run the emulator, use the following command:
 cargo run --bin main
 ```
 
+You will then be asked to provide a path to the ROM to load.
 If an error occurs, be sure that [SDL2](https://github.com/Rust-SDL2/rust-sdl2?tab=readme-ov-file#requirements) is installed on your system.
 
 
