@@ -21,10 +21,8 @@ pub struct CPU {
     pub vs: [u8; 16], // general-purpose registers, labeled V0-VF
 }
 
-enum KeyEvent {
-    KeyPressed(u4)
-}
-
+pub type KeyState = [bool; 16];
+pub const NO_KEYS : KeyState = [false; 16];
 struct NibblePair(u4, u4);
 
 impl From<u8> for NibblePair {
@@ -99,6 +97,10 @@ pub enum Opcode {
     SetRegToDelay(u4),
     SetDelayToReg(u4),
     SetSoundToReg(u4),
+    //Input
+    SkipIfKey(u4),
+    SkipIfNotKey(u4),
+    GetKey(u4),
     // Miscellaneous
     Decimal(u4),
     AddToIndex(u4),
@@ -137,8 +139,25 @@ impl CPU {
     pub fn step(&mut self) -> Result<()> {
         let instr = self.fetch();
         let opcode = self.try_decode(instr)?;
-        self.execute(opcode);
+        self.execute(opcode, NO_KEYS);
         Ok(())
+    }
+
+    pub fn decr_delay(&mut self) -> () {
+        if self.delay > 0 {
+            self.delay -= 1;
+        }
+    }
+
+    pub fn decr_sound(&mut self) -> () {
+        if self.beep > 0 {
+            self.beep -= 1;
+        }
+    }
+
+    pub fn decr_timers(&mut self) -> () {
+        self.decr_delay();
+        self.decr_sound();
     }
     /* Fetches the current instruction pointed to by the PC. Increments the PC by 2 */
     pub fn fetch(&mut self) -> (u8, u8) {
@@ -263,6 +282,20 @@ impl CPU {
                 Opcode::JumpOffset(nibtrio_2_u12((nib_1, nib_2, nib_3)))
             }
 
+            (byte_1 @ 0xE0..=0xEF, 0x9E) => {
+                let NibblePair(_, key) = byte_1.into();
+                Opcode::SkipIfKey(key)
+            }
+
+            (byte_1 @ 0xE0..=0xEF, 0xA1) => {
+                let NibblePair(_, key) = byte_1.into();
+                Opcode::SkipIfNotKey(key)
+            }
+
+            (byte_1 @ 0xF0..=0xFF, 0x0A) => {
+                let NibblePair(_, key) = byte_1.into();
+                Opcode::GetKey(key)
+            }
 
             _ => {
                 return Err(Chip8Error::DecodeError {
@@ -310,7 +343,7 @@ impl CPU {
     }
 
     /* Executes the instruction indicated by ``opcode`` */
-    pub fn execute(&mut self, opcode: Opcode) -> () {
+    pub fn execute(&mut self, opcode: Opcode, keystate : KeyState) -> () {
         match opcode {
             Opcode::ClearScreen => self.op_00e0(),
             Opcode::Jump(addr) => self.op_1nnn(addr),
@@ -342,7 +375,10 @@ impl CPU {
             Opcode::SetRegToDelay(x) => self.op_fx07(x),
             Opcode::SetDelayToReg(x) => self.op_fx15(x),
             Opcode::SetSoundToReg(x) => self.op_fx18(x),
-            Opcode::JumpOffset(nnn) => self.op_bnnn_modern(nnn)
+            Opcode::JumpOffset(nnn) => self.op_bnnn_modern(nnn),
+            Opcode::SkipIfKey(x) => self.op_ex9e(x, keystate),
+            Opcode::SkipIfNotKey(x) => self.op_exa1(x, keystate),
+            Opcode::GetKey(x) => self.op_fx0a(x, keystate)
             
         }
     }
@@ -649,6 +685,40 @@ impl CPU {
         let vx = self.load_from(x);
         let addr = nnn + vx.into();
         self.pc = addr
+    }
+
+    fn op_ex9e(&mut self, x : u4, keystate : KeyState) -> () {
+        let index = nib_to_usize(x);
+        let vx : usize = self.vs[index].into();
+        if keystate[vx] {
+            self.pc = self.pc + 2.into();
+        }
+    }
+
+    fn op_exa1(&mut self, x : u4, keystate : KeyState) -> () {
+        let index = nib_to_usize(x);
+        let vx : usize = self.vs[index].into();
+        if !keystate[vx] {
+            self.pc = self.pc + 2.into();
+        }
+    }
+    fn op_fx0a(&mut self, x : u4, keystate : KeyState) -> () {
+        let index = nib_to_usize(x);
+        let mut key_pressed = false;
+        for i in (0..0xF) {
+            if keystate[i] {
+                key_pressed = true;
+                break
+            }
+        }
+        
+        if key_pressed {
+            self.vs[index] = x.into();
+            return;
+        }
+
+        self.pc = self.pc - 2.into()
+
     }
     pub fn view(&self) -> () {
         print!("   ");

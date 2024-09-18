@@ -1,4 +1,4 @@
-use crate::cpu::{Opcode, CPU};
+use crate::cpu::{Opcode, CPU, NO_KEYS};
 use crate::error::*;
 use std::fs;
 
@@ -48,7 +48,7 @@ pub fn load_program(filename: &str) -> Result<CPU> {
 /// chip8 instruction. Executes each instruction in the CPU.
 pub fn run(filename: &str, cpu: &mut CPU) -> Result<()> {
     for opcode in load_opcodes(filename)? {
-        cpu.execute(opcode);
+        cpu.execute(opcode, NO_KEYS);
     }
     Ok(())
 }

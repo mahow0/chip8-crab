@@ -220,7 +220,7 @@ fn main() {
                 let (a, b) = (opcode >> 8, opcode & 0x00FF);
                 let (a, b) = (a as u8, b as u8);
                 let decoded_opcode = cpu.decode((a, b));
-                cpu.execute(decoded_opcode);
+                cpu.execute(decoded_opcode, NO_KEYS);
             }
 
             Command::Debug => {
