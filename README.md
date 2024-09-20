@@ -5,9 +5,9 @@ A Chip-8 emulator written in Rust
 
 ## Roadmap
 
-- [ ] Implement the fetch, decode, and execute loop 
-- [ ] Connect to graphics library 
-- [ ] Add keyboard input
+- [x] Implement the fetch, decode, and execute loop 
+- [x] Connect to graphics library 
+- [x] Add keyboard input
 - [ ] Add tests
 
 ## Subgoals

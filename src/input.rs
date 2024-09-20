@@ -164,20 +164,21 @@ pub fn run() -> Arc<Mutex<Vec<Scancode>>>{
             let keystate = get_keystate(&event_pump);
             codes.lock().unwrap().clear();
             for scancode in event_pump.keyboard_state().pressed_scancodes() {
+                println!{"SCANCODE: {:?}", scancode}
                 codes.lock().unwrap().push(scancode);
             }
 
 
 
-            
+
             ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
 
             // The rest of the game loop goes here...
 
             let instr = cpu.fetch();
             let opcode = cpu.decode(instr);
-            //println!("OPCODE: {:?}", opcode);
-            //println!("KEYSTATE: {:?}", keystate);
+            println!("OPCODE: {:?}", opcode);
+            println!("KEYSTATE: {:?}", keystate);
             cpu.execute(opcode, keystate);
             cpu.decr_timers();
             draw_screen(&(cpu.vram), &mut canvas);

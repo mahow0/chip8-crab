@@ -705,7 +705,7 @@ impl CPU {
     fn op_fx0a(&mut self, x : u4, keystate : KeyState) -> () {
         let index = nib_to_usize(x);
         let mut key_pressed = false;
-        for i in (0..0xF) {
+        for i in (0..=0xF) {
             if keystate[i] {
                 key_pressed = true;
                 break
