@@ -704,16 +704,18 @@ impl CPU {
     }
     fn op_fx0a(&mut self, x : u4, keystate : KeyState) -> () {
         let index = nib_to_usize(x);
-        let mut key_pressed = false;
-        for i in (0..=0xF) {
-            if keystate[i] {
-                key_pressed = true;
+        let mut key_press : Option<u8> = None;
+
+        for i in (0u8..=0xFu8) {
+            let index : usize = i.into();
+            if keystate[index] {
+                key_press = Some(i);
                 break
             }
         }
         
-        if key_pressed {
-            self.vs[index] = x.into();
+        if key_press.is_some() {
+            self.vs[index] = key_press.unwrap();
             return;
         }
 

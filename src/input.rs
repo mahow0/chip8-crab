@@ -99,22 +99,22 @@ pub fn draw_screen(vram : &([[bool; HEIGHT]; WIDTH]), canvas : &mut Canvas<Windo
 
 pub fn get_keystate(e : &sdl2::EventPump) -> KeyState {
     [
-        one_pressed(e),
-        two_pressed(e),
-        three_pressed(e),
-        four_pressed(e),
-        q_pressed(e),
-        w_pressed(e),
-        e_pressed(e),
-        r_pressed(e),
-        a_pressed(e),
-        s_pressed(e),
-        d_pressed(e),
-        f_pressed(e),
-        z_pressed(e),
-        x_pressed(e),
-        c_pressed(e),
-        v_pressed(e)
+        x_pressed(e), // 0
+        one_pressed(e), // 1
+        two_pressed(e),  // 2
+        three_pressed(e), // 3
+        q_pressed(e), // 4
+        w_pressed(e), // 5
+        e_pressed(e), // 6
+        a_pressed(e), // 7
+        s_pressed(e), // 8
+        d_pressed(e), // 9
+        z_pressed(e), // A
+        c_pressed(e), // B
+        four_pressed(e), // C
+        r_pressed(e), // D
+        f_pressed(e), // E
+        v_pressed(e) // F
     ]
 }
 
@@ -164,7 +164,6 @@ pub fn run() -> Arc<Mutex<Vec<Scancode>>>{
             let keystate = get_keystate(&event_pump);
             codes.lock().unwrap().clear();
             for scancode in event_pump.keyboard_state().pressed_scancodes() {
-                println!{"SCANCODE: {:?}", scancode}
                 codes.lock().unwrap().push(scancode);
             }
 
@@ -177,8 +176,6 @@ pub fn run() -> Arc<Mutex<Vec<Scancode>>>{
 
             let instr = cpu.fetch();
             let opcode = cpu.decode(instr);
-            println!("OPCODE: {:?}", opcode);
-            println!("KEYSTATE: {:?}", keystate);
             cpu.execute(opcode, keystate);
             cpu.decr_timers();
             draw_screen(&(cpu.vram), &mut canvas);
